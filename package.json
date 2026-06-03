@@ -40,6 +40,10 @@
     "prepublishOnly": "npm run build"
   },
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+ssh://git@bitbucket.org/taylor_sando/projectkit.git"
+  },
   "devDependencies": {
     "typescript": "^5.6.0"
   },
