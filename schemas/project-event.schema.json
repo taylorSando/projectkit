@@ -1,0 +1,71 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://operator.dev/schemas/project-event-1.0.0.json",
+  "title": "ProjectEventEnvelope",
+  "description": "projectkit contract v1.0.0 — the project-facing event envelope a testbed emits and a subscriber (e.g. mesh) validates. Cross-language mirror of src/contract.ts.",
+  "type": "object",
+  "required": ["contract_version", "project_key", "emitted_at", "producer", "events"],
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": { "type": "string", "const": "1.0.0" },
+    "project_key": { "type": "string", "minLength": 1 },
+    "emitted_at": { "type": "string", "format": "date-time" },
+    "delivery_id": { "type": "string" },
+    "producer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "events": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/ProjectEvent" }
+    }
+  },
+  "$defs": {
+    "ProjectEvent": {
+      "type": "object",
+      "required": ["schema_version", "event_type", "project_key", "occurred_at"],
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "string" },
+        "event_type": { "type": "string", "minLength": 1 },
+        "project_key": { "type": "string", "minLength": 1 },
+        "occurred_at": { "type": "string", "format": "date-time" },
+        "domain": {
+          "type": "string",
+          "enum": ["lifecycle", "navigation", "user_action", "workflow_state", "workflow_event", "entity_view", "entity_change", "capture", "runtime_error", "diagnostic"]
+        },
+        "outcome": { "type": "string" },
+        "environment": { "type": "string" },
+        "build_sha": { "type": "string" },
+        "source_surface": { "type": "string" },
+        "route_path": { "type": "string" },
+        "route_name": { "type": "string" },
+        "session_id": { "type": "string" },
+        "actor_kind": { "type": "string" },
+        "principal_id": { "type": ["string", "number", "null"] },
+        "acting_as": { "type": ["string", "number", "null"] },
+        "entity_kind": { "type": "string" },
+        "entity_id": { "type": ["string", "number", "null"] },
+        "workflow_id": { "type": ["string", "number", "null"] },
+        "state_before": { "type": "string" },
+        "state_after": { "type": "string" },
+        "action": { "type": "string" },
+        "reason": { "type": "string" },
+        "duration_ms": { "type": "number" },
+        "count": { "type": "number" },
+        "error_code": { "type": "string" },
+        "error_message": { "type": "string" },
+        "summary": { "type": "string" },
+        "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] },
+        "redaction_status": { "type": "string", "enum": ["raw", "redacted", "summary_only", "pointer_only"] },
+        "retention_class": { "type": "string" },
+        "payload": { "type": "object" }
+      }
+    }
+  }
+}

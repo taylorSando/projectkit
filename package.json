@@ -1,0 +1,49 @@
+{
+  "name": "@operator/projectkit",
+  "version": "0.1.0",
+  "description": "Standalone project-signal interface: the project-facing capture/event contract, a sink-agnostic emitter SDK, and the context-handoff protocol. Turns any repo into a testbed that emits work for an agent fleet. Imports NOTHING from control-plane or mesh — mesh is just one optional sink.",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "handoff": "bin/handoff.mjs"
+  },
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js",
+      "default": "./dist/index.js"
+    },
+    "./contract": {
+      "types": "./dist/contract.d.ts",
+      "import": "./dist/contract.js"
+    },
+    "./handoff": {
+      "types": "./dist/handoff.d.ts",
+      "import": "./dist/handoff.js"
+    },
+    "./schemas/project-event.schema.json": "./schemas/project-event.schema.json",
+    "./schemas/handoff.schema.json": "./schemas/handoff.schema.json"
+  },
+  "files": [
+    "dist",
+    "src",
+    "schemas",
+    "bin",
+    "README.md",
+    "CONTRACT.md"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && node --test test/*.test.mjs",
+    "prepublishOnly": "npm run build"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

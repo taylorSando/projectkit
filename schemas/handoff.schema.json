@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://operator.dev/schemas/handoff-1.0.0.json",
+  "title": "Handoff",
+  "description": "projectkit context-handoff protocol v1.0.0 — a structured, resumable agent handoff. Mirror of src/handoff.ts.",
+  "type": "object",
+  "required": ["handoff_version", "project_key", "title", "created_at", "summary", "environment", "live_state", "gotchas"],
+  "additionalProperties": false,
+  "properties": {
+    "handoff_version": { "type": "string", "const": "1.0.0" },
+    "project_key": { "type": "string", "minLength": 1 },
+    "title": { "type": "string", "minLength": 1 },
+    "created_at": { "type": "string", "format": "date-time" },
+    "from_agent": { "type": "string" },
+    "summary": { "type": "string", "minLength": 1 },
+    "environment": {
+      "type": "object",
+      "required": ["hard_rules"],
+      "additionalProperties": false,
+      "properties": {
+        "repo": { "type": "string" },
+        "remote": { "type": "string" },
+        "hard_rules": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "live_state": { "type": "array", "items": { "type": "string" } },
+    "immediate_task": {
+      "type": "object",
+      "required": ["title", "steps"],
+      "additionalProperties": false,
+      "properties": {
+        "title": { "type": "string" },
+        "steps": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "procedure": { "type": "array", "items": { "type": "string" } },
+    "gotchas": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["note"],
+        "additionalProperties": false,
+        "properties": {
+          "note": { "type": "string" },
+          "severity": { "type": "string", "enum": ["info", "warn", "blocker"] }
+        }
+      }
+    },
+    "operator_gated": { "type": "array", "items": { "type": "string" } },
+    "links": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "ref"],
+        "additionalProperties": false,
+        "properties": {
+          "label": { "type": "string" },
+          "ref": { "type": "string" }
+        }
+      }
+    },
+    "resume_prompt": { "type": "string" }
+  }
+}
