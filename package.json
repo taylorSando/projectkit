@@ -22,6 +22,10 @@
       "types": "./dist/dispatch.d.ts",
       "import": "./dist/dispatch.js"
     },
+    "./mesh-hmac": {
+      "types": "./dist/mesh-hmac.d.ts",
+      "import": "./dist/mesh-hmac.js"
+    },
     "./handoff": {
       "types": "./dist/handoff.d.ts",
       "import": "./dist/handoff.js"
