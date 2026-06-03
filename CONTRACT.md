@@ -1,8 +1,8 @@
-# projectkit contract — v1.1.0
+# projectkit contract — v1.2.0
 
 > This is the published interface Agents B (testbeds) and C (flywheel) pin to.
-> Pin a caret range: `"@operator/projectkit": "^0.2.0"` (package), contract
-> semver `1.1.0`. Breaking the wire shape requires a major bump + a migration note here.
+> Pin a caret range: `"@operator/projectkit": "^0.3.0"` (package), contract
+> semver `1.2.0`. Breaking the wire shape requires a major bump + a migration note here.
 
 ## The seam (one inversion)
 
@@ -123,6 +123,45 @@ capture pipeline — validates against the same wire). Required: `schema_version
 superset of attribution fields still validates; cp-boundary fields (`probe_data`,
 `operator_context_inbound`) stay opaque.
 
+## LogRecord — v1.2.0
+
+A `ProjectEvent` says *"this happened"* and a `WorkRequest` says *"do this."* `LogRecord` is
+the FIFTH capability: structured LOGGING as a first-class contract surface. Before v1.2.0 a
+testbed had no published way to ship a structured log line to the flywheel — logging was
+either dropped on the floor or stuffed, untyped, into a generic event payload. With
+`LogRecord` a testbed emits a typed, **leveled**, redaction-aware log line and routes it
+through the **same sink** — mesh stays just-a-URL, one replaceable subscriber, never the
+owner of the log.
+
+```ts
+import { createProjectSignal, HttpSink, NullSink } from '@operator/projectkit';
+
+const signal = createProjectSignal({ projectKey: 'sitelayer', sink });
+
+await signal.log('error', 'QBO sync failed', { company: 'la-operations', code: 'E_TIMEOUT' });
+await signal.log('info', 'takeoff scale calibrated', { sheet: 3 });
+```
+
+`log` travels as a `<project>.log` `ProjectEvent` (domain `diagnostic`, or `runtime_error`
+for `error`/`fatal`) carrying the typed `LogRecord` in `payload.log_record`, so **no sink has
+to change** and it is **inert under `NullSink`** (logging is off, the app keeps working). A
+subscriber that understands logs reads that payload (or validates the standalone `LogEnvelope`
+from `signal.buildLogEnvelope([...])`, the Go-side wire mirror).
+
+### LogRecord — required fields
+
+| field | type | notes |
+|---|---|---|
+| `schema_version` | string | equals `1.2.0` at emit (SDK-stamped) |
+| `project_key` | string | OPEN string — no closed roster (SDK-stamped) |
+| `occurred_at` | string | ISO-8601 (SDK-stamped) |
+| `level` | string | `debug` \| `info` \| `warn` \| `error` \| `fatal` (CLOSED set — a routing primitive) |
+| `message` | string | the human-readable log line |
+
+Optional: `logger`, `source_surface`, `session_id`, `error_code`, `error_message`,
+`fields` (structured context), `sensitivity`, `redaction_status`. See `src/log.ts` for the
+full list and `schemas/log-record.schema.json` for the cross-language mirror.
+
 ## Handoff protocol — v1.0.0
 
 A structured replacement for hand-written `~/projects/.<repo>-handoff-*.md`. Sections:
@@ -138,6 +177,14 @@ prints the paste-ready next-agent prompt derived from the structure.
   (expand/backfill/contract).
 
 ### Migration log
+- `1.2.0` (2026-06-03) — ADDITIVE: add the LogRecord surface (`src/log.ts`: `LogLevel`,
+  `LogRecord`, `LogEnvelope`, `validateLogRecord`) + `ProjectSignal.log(level, message, fields?)`
+  routing through the same EventSink (inert under `NullSink`) + `signal.buildLogEnvelope` +
+  `schemas/log-record.schema.json` Go-side mirror. LOGGING becomes a first-class contract
+  surface — a testbed can ship a typed, leveled log line instead of dropping it or stuffing it
+  untyped into an event payload. No existing field changed; subscribers tolerate `1.0.0`,
+  `1.1.0`, and `1.2.0` (the project-event + work-request schemas' `contract_version` enums
+  widened to include `1.2.0`). Package `0.2.0` → `0.3.0`.
 - `1.1.0` (2026-06-03) — ADDITIVE: add the WorkRequest surface (`src/work.ts`:
   `WorkRequest`, `WorkRequestEnvelope`, `validateWorkRequest`) + `ProjectSignal.requestWork`
   routing through the same EventSink + `schemas/work-request.schema.json` Go-side mirror.

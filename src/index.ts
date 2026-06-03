@@ -48,11 +48,19 @@ export {
 } from './work.js';
 
 export {
+  validateLogRecord,
+  type LogLevel,
+  type LogRecord,
+  type LogEnvelope,
+} from './log.js';
+
+export {
   createProjectSignal,
   type ProjectSignal,
   type ProjectSignalConfig,
   type EmitInput,
   type WorkRequestInput,
+  type LogRecordInput,
 } from './client.js';
 
 export {

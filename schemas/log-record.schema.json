@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://operator.dev/schemas/log-record-1.2.0.json",
+  "title": "LogEnvelope",
+  "description": "projectkit contract v1.2.0 — the project-facing LOG envelope a testbed emits to ship structured, leveled log lines, and a subscriber (e.g. mesh) validates before ingesting. Cross-language mirror of src/log.ts. LOGGING is the fifth first-class contract surface alongside ProjectEvent, CaptureEnvelope, WorkRequest, and Handoff.",
+  "type": "object",
+  "required": ["contract_version", "project_key", "emitted_at", "producer", "records"],
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": { "type": "string", "enum": ["1.2.0"] },
+    "project_key": { "type": "string", "minLength": 1 },
+    "emitted_at": { "type": "string", "format": "date-time" },
+    "delivery_id": { "type": "string" },
+    "producer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "records": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/LogRecord" }
+    }
+  },
+  "$defs": {
+    "LogRecord": {
+      "type": "object",
+      "required": ["schema_version", "project_key", "occurred_at", "level", "message"],
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "string" },
+        "project_key": { "type": "string", "minLength": 1 },
+        "occurred_at": { "type": "string", "format": "date-time" },
+        "level": {
+          "type": "string",
+          "enum": ["debug", "info", "warn", "error", "fatal"]
+        },
+        "message": { "type": "string", "minLength": 1 },
+        "logger": { "type": "string" },
+        "source_surface": { "type": "string" },
+        "session_id": { "type": "string" },
+        "error_code": { "type": "string" },
+        "error_message": { "type": "string" },
+        "fields": { "type": "object" },
+        "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] },
+        "redaction_status": { "type": "string", "enum": ["raw", "redacted", "summary_only", "pointer_only"] }
+      }
+    }
+  }
+}

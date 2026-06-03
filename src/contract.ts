@@ -14,7 +14,7 @@
  */
 
 /** Semver of this contract. Subscribers pin a `^` range; producers stamp it on every event. */
-export const CONTRACT_VERSION = '1.1.0' as const;
+export const CONTRACT_VERSION = '1.2.0' as const;
 
 /**
  * A project key is an OPEN string — a project self-identifies. This is the

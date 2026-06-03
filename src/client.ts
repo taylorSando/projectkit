@@ -27,6 +27,12 @@ import {
   type WorkRequest,
   type WorkRequestEnvelope,
 } from './work.js';
+import {
+  validateLogRecord,
+  type LogLevel,
+  type LogRecord,
+  type LogEnvelope,
+} from './log.js';
 import type { EventSink, SinkResult } from './sink.js';
 
 /** Everything except the fields the SDK stamps for you. */
@@ -36,6 +42,14 @@ export type EmitInput = Omit<ProjectEvent, 'schema_version' | 'project_key' | 'o
 /** A work request minus the fields the SDK stamps for you. */
 export type WorkRequestInput = Omit<WorkRequest, 'schema_version' | 'project_key' | 'requested_at'> &
   Partial<Pick<WorkRequest, 'requested_at' | 'project_key'>>;
+
+/**
+ * A log record minus the fields the SDK stamps for you. `level` and `message`
+ * are required; the rest (logger, source_surface, error_code, fields, …) are
+ * optional. `project_key`/`occurred_at` may be supplied to override the stamp.
+ */
+export type LogRecordInput = Omit<LogRecord, 'schema_version' | 'project_key' | 'occurred_at'> &
+  Partial<Pick<LogRecord, 'occurred_at' | 'project_key'>>;
 
 export interface ProjectSignalConfig {
   projectKey: ProjectKey;
@@ -71,10 +85,22 @@ export interface ProjectSignal {
    * the standalone WorkRequestEnvelope from `buildWorkEnvelope`).
    */
   requestWork(req: WorkRequestInput, eventType?: string): Promise<SinkResult>;
+  /**
+   * LOG through the contract. A testbed ships a typed, leveled, redaction-aware
+   * log line and routes it through the SAME EventSink (mesh stays just-a-URL):
+   * the line travels as a `*.log` ProjectEvent (domain `diagnostic`, or
+   * `runtime_error` for error/fatal) carrying the typed LogRecord in
+   * `payload.log_record`, so no sink needs to change. Inert under NullSink. A
+   * subscriber that understands logs reads the payload (or validates the
+   * standalone LogEnvelope from `buildLogEnvelope`).
+   */
+  log(level: LogLevel, message: string, fields?: Record<string, unknown>): Promise<SinkResult>;
   /** Build (but do not send) the wire event envelope — handy for inspection/tests. */
   build(events: EmitInput[]): ProjectEventEnvelope;
   /** Build (but do not send) the standalone WorkRequestEnvelope — the Go-side wire mirror. */
   buildWorkEnvelope(reqs: WorkRequestInput[]): WorkRequestEnvelope;
+  /** Build (but do not send) the standalone LogEnvelope — the Go-side wire mirror. */
+  buildLogEnvelope(records: LogRecordInput[]): LogEnvelope;
 }
 
 const defaultNow = () => new Date().toISOString();
@@ -137,6 +163,31 @@ export function createProjectSignal(config: ProjectSignalConfig): ProjectSignal 
     ...(config.deliveryId ? { delivery_id: config.deliveryId() } : {}),
   });
 
+  const materializeLogRecord = (input: LogRecordInput): LogRecord => {
+    const record: LogRecord = {
+      ...input,
+      schema_version: CONTRACT_VERSION,
+      project_key: input.project_key ?? config.projectKey,
+      occurred_at: input.occurred_at ?? now(),
+    };
+    const problems = validateLogRecord(record);
+    if (problems.length > 0) {
+      const msg = `[projectkit] invalid log record (${record.level}): ${problems.join('; ')}`;
+      if (config.strict) throw new Error(msg);
+      onError({ ok: false, sink: 'validation', error: msg }, buildEnvelope([]));
+    }
+    return record;
+  };
+
+  const buildLogEnvelope = (inputs: LogRecordInput[]): LogEnvelope => ({
+    contract_version: CONTRACT_VERSION,
+    project_key: config.projectKey,
+    emitted_at: now(),
+    producer,
+    records: inputs.map(materializeLogRecord),
+    ...(config.deliveryId ? { delivery_id: config.deliveryId() } : {}),
+  });
+
   const send = async (inputs: EmitInput[]): Promise<SinkResult> => {
     const events = inputs.map(materialize);
     const envelope = buildEnvelope(events);
@@ -178,7 +229,29 @@ export function createProjectSignal(config: ProjectSignalConfig): ProjectSignal 
         } as EmitInput,
       ]);
     },
+    log: async (level, message, fields) => {
+      const record = materializeLogRecord({
+        level,
+        message,
+        ...(fields !== undefined ? { fields } : {}),
+      });
+      return send([
+        {
+          event_type: `${config.projectKey}.log`,
+          domain: level === 'error' || level === 'fatal' ? 'runtime_error' : 'diagnostic',
+          outcome: level === 'error' || level === 'fatal' ? 'failed' : 'unknown',
+          action: level,
+          summary: record.message,
+          error_code: record.error_code,
+          error_message: record.error_message,
+          sensitivity: record.sensitivity,
+          redaction_status: record.redaction_status,
+          payload: { log_record: record },
+        } as EmitInput,
+      ]);
+    },
     build: (events) => buildEnvelope(events.map(materialize)),
     buildWorkEnvelope,
+    buildLogEnvelope,
   };
 }
