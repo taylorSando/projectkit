@@ -24,6 +24,7 @@
     },
     "./schemas/project-event.schema.json": "./schemas/project-event.schema.json",
     "./schemas/work-request.schema.json": "./schemas/work-request.schema.json",
+    "./schemas/capture-envelope.schema.json": "./schemas/capture-envelope.schema.json",
     "./schemas/handoff.schema.json": "./schemas/handoff.schema.json"
   },
   "files": [

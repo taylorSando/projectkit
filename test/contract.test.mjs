@@ -1,5 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import {
   CONTRACT_VERSION,
   createProjectSignal,
@@ -179,4 +180,59 @@ test('handoff markdown renders the canonical sections', () => {
   assert.match(md, /## 0\. Environment & hard rules/);
   assert.match(md, /## 1\. Live state/);
   assert.match(md, /## 4\. Gotchas/);
+});
+
+// --- capture-envelope cross-language mirror ------------------------------
+// CaptureEnvelope now has ONE published wire (schemas/capture-envelope.schema.json),
+// the Go/Python-readable mirror of the CaptureEnvelope interface in src/contract.ts.
+// This matches the existing project-event mirror so a non-JS producer (e.g. the
+// operator capture pipeline's Python builder) validates against the same shape.
+
+const captureSchema = JSON.parse(
+  readFileSync(new URL('../schemas/capture-envelope.schema.json', import.meta.url), 'utf8'),
+);
+
+test('capture-envelope schema is the cross-language mirror of the TS CaptureEnvelope', () => {
+  // Mirror the contract: every typed property of the CaptureEnvelope interface
+  // must be declared in the schema (drift the other way is caught by review).
+  const tsProps = [
+    'schema_version', 'capture_session_id', 'url', 'page_title', 'captured_at',
+    'host_id', 'project_key', 'project_hint', 'source_surface', 'screenshot_ref',
+    'dom_excerpt', 'selected_text', 'picked_element', 'network_captures',
+    'library_hints', 'operator_intent', 'sensitivity', 'build_sha',
+    'feature_flags', 'probe_data', 'operator_context_inbound', 'meta',
+  ];
+  for (const p of tsProps) {
+    assert.ok(captureSchema.properties[p], `schema is missing TS field: ${p}`);
+  }
+  // Like the project-event ProjectEvent mirror, extras are tolerated so a
+  // producer-superset (the Python builder emits more attribution fields) validates.
+  assert.equal(captureSchema.additionalProperties, true);
+  assert.equal(captureSchema.$id, 'https://operator.dev/schemas/capture-envelope-1.0.0.json');
+});
+
+test('an envelope emitted via signal.capture() satisfies the published schema required fields', async () => {
+  const sink = new MemorySink();
+  const signal = createProjectSignal({ projectKey: 'sitelayer', sink, now: fixedNow });
+  await signal.capture({
+    schema_version: CONTRACT_VERSION,
+    url: 'https://sitelayer.com/x',
+    page_title: 'X',
+    captured_at: fixedNow(),
+    host_id: 'h1',
+    screenshot_ref: 'path://s.png',
+    dom_excerpt: '<div/>',
+    selected_text: '',
+    picked_element: null,
+    network_captures: [],
+    library_hints: [],
+    operator_intent: 'fix the thing',
+    sensitivity: 'internal',
+  });
+  const env = sink.events[0].payload.capture_envelope;
+  for (const req of captureSchema.required) {
+    assert.ok(req in env, `emitted capture envelope missing required field: ${req}`);
+  }
+  // sensitivity is constrained to the published enum.
+  assert.ok(captureSchema.properties.sensitivity.enum.includes(env.sensitivity));
 });

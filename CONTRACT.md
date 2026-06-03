@@ -44,8 +44,10 @@ The testbed depends ONLY on the contract — never on the subscriber existing. T
 ## What the flywheel (Agent C) does
 
 mesh stops owning the capture wire types. It exposes an ingest URL and validates inbound
-envelopes against `schemas/project-event.schema.json` (the Go-side mirror of `src/contract.ts`).
-It is a subscriber: replaceable, self-hostable, not in the project's dependency graph.
+envelopes against the published cross-language mirrors of `src/contract.ts`:
+`schemas/project-event.schema.json` (the event wire) and
+`schemas/capture-envelope.schema.json` (the capture wire). It is a subscriber:
+replaceable, self-hostable, not in the project's dependency graph.
 
 ## ProjectEvent — required fields (v1.0.0)
 
@@ -109,6 +111,18 @@ for the full list and `schemas/work-request.schema.json` for the cross-language 
 > skill's untyped `operator_intent` decision tree into a single typed field: the testbed
 > declares the intent at the source instead of mesh re-deriving it downstream.
 
+## CaptureEnvelope — required fields (v1.0.0)
+
+The "tab-to-task" capture unit (a captured moment on a surface). Its TS shape is the
+`CaptureEnvelope` interface in `src/contract.ts`; the cross-language mirror is
+`schemas/capture-envelope.schema.json` (so a Go or Python producer — e.g. the operator
+capture pipeline — validates against the same wire). Required: `schema_version`, `url`,
+`page_title`, `captured_at`, `host_id`, `screenshot_ref`, `dom_excerpt`, `selected_text`,
+`picked_element`, `network_captures`, `library_hints`, `operator_intent`, `sensitivity`.
+`additionalProperties` is `true` (like the project-event mirror) so a producer that emits a
+superset of attribution fields still validates; cp-boundary fields (`probe_data`,
+`operator_context_inbound`) stay opaque.
+
 ## Handoff protocol — v1.0.0
 
 A structured replacement for hand-written `~/projects/.<repo>-handoff-*.md`. Sections:
@@ -134,3 +148,8 @@ prints the paste-ready next-agent prompt derived from the structure.
 - `1.0.0` (2026-06-03) — initial extraction from `@operator/types` capture surface. `project_key`
   is now an open string (no roster). cp-boundary fields (`probe_data`, `operator_context_inbound`)
   are opaque `unknown` so the project-facing contract does not drag in the mesh integration types.
+- `1.0.0` (2026-06-03, additive/no wire change) — published `schemas/capture-envelope.schema.json`
+  so `CaptureEnvelope` (already owned in `src/contract.ts`) has ONE cross-language wire, matching
+  the existing project-event mirror. No type changed; this only gives non-JS producers a single
+  schema to validate against. The operator capture pipeline (`capture/lib/capture_envelope.py`)
+  repoints its validator here from the stale `operator-types` copy.

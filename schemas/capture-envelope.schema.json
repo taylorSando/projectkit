@@ -1,0 +1,59 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://operator.dev/schemas/capture-envelope-1.0.0.json",
+  "title": "CaptureEnvelope",
+  "description": "projectkit contract v1.0.0 — the project-facing capture envelope a testbed (or the operator capture pipeline) emits and a subscriber (e.g. mesh) reads. Cross-language mirror of the CaptureEnvelope interface in src/contract.ts. additionalProperties is true (like the project-event ProjectEvent mirror): producer-specific extras live under meta or alongside, and a subscriber that doesn't understand a field ignores it — the typed fields below are the published wire.",
+  "type": "object",
+  "required": ["schema_version", "url", "page_title", "captured_at", "host_id", "screenshot_ref", "dom_excerpt", "selected_text", "picked_element", "network_captures", "library_hints", "operator_intent", "sensitivity"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "capture_session_id": { "type": ["string", "null"] },
+    "url": { "type": "string" },
+    "page_title": { "type": "string" },
+    "captured_at": { "type": "string", "description": "ISO-8601 / RFC-3339 timestamp." },
+    "host_id": { "type": "string" },
+    "project_key": { "type": ["string", "null"] },
+    "project_hint": { "type": ["string", "null"] },
+    "source_surface": { "type": ["string", "null"] },
+    "screenshot_ref": { "type": "string" },
+    "dom_excerpt": { "type": "string" },
+    "selected_text": { "type": "string" },
+    "picked_element": {
+      "type": ["object", "null"],
+      "properties": {
+        "selector": { "type": "string" },
+        "outerHTML": { "type": "string" }
+      }
+    },
+    "network_captures": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "method": { "type": "string" },
+          "url": { "type": "string" },
+          "status": { "type": "integer" },
+          "content_type": { "type": "string" }
+        }
+      }
+    },
+    "library_hints": { "type": "array", "items": { "type": "string" } },
+    "operator_intent": { "type": "string" },
+    "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] },
+    "build_sha": { "type": ["string", "null"] },
+    "feature_flags": { "type": "array", "items": { "type": "string" } },
+    "probe_data": {
+      "description": "Opaque probe output, if a probe was mounted (cp-boundary; not typed by the contract).",
+      "type": ["object", "null"]
+    },
+    "operator_context_inbound": {
+      "description": "Opaque inbound operator-context packet (cp-boundary; not typed by the contract).",
+      "type": ["object", "null"]
+    },
+    "meta": {
+      "description": "Producer-emitted extras (producer/version/viewport/etc.).",
+      "type": "object"
+    }
+  }
+}
