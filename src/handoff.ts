@@ -17,7 +17,7 @@
 export const HANDOFF_VERSION = '1.0.0' as const;
 
 export interface HandoffEnvironment {
-  /** Repo path or name, e.g. "/home/taylorsando/projects/sitelayer". */
+  /** Repo path or name, e.g. "/path/to/repo" or "myorg/myrepo". */
   repo?: string;
   remote?: string;
   /** Non-negotiable rules the next agent must obey (HOME prefix, no-prod, …). */

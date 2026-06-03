@@ -21,9 +21,9 @@ a sink-agnostic emitter SDK, and the context-handoff protocol — owning **nothi
 ## Install / build
 
 ```sh
-HOME=/home/taylorsando npm install      # zero runtime deps; typescript is the only devDep
-HOME=/home/taylorsando npm run build     # tsc → dist/
-HOME=/home/taylorsando npm test          # build + node --test (contract + fail-closed invariant)
+npm install      # zero runtime deps; typescript is the only devDep
+npm run build    # tsc → dist/
+npm test         # build + node --test (contract + fail-closed invariant)
 ```
 
 ## Use it (a testbed)

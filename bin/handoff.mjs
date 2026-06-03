@@ -40,7 +40,7 @@ switch (cmd) {
     const h = newHandoff(project, title);
     h.summary = 'TODO: one-paragraph "where we are / what you are taking over".';
     h.environment.repo = arg('--repo', `~/projects/${project}`);
-    h.environment.hard_rules = ['ALWAYS prefix git/gh/npm with HOME=/home/taylorsando'];
+    h.environment.hard_rules = ['TODO: project-specific hard rules (e.g. required env prefixes, "PROD never auto-deploys").'];
     h.live_state = ['TODO: verifiable current-state bullets (SHAs, live URLs, what landed).'];
     h.gotchas = [{ note: 'TODO: the thing that will bite the next agent.', severity: 'warn' }];
     const out = arg('--out');
