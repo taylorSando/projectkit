@@ -55,12 +55,33 @@ export {
 } from './log.js';
 
 export {
+  validateConcern,
+  validateCallback,
+  NullDispatchAdapter,
+  MemoryDispatchAdapter,
+  HttpDispatchAdapter,
+  type CallbackMode,
+  type ConcernCallback,
+  type ConcernPriority,
+  type Concern,
+  type DispatchEnvelope,
+  type Ack,
+  type CallbackStatus,
+  type CallbackArtifact,
+  type Callback,
+  type DispatchAdapter,
+  type DispatchSignFn,
+  type HttpDispatchAdapterOptions,
+} from './dispatch.js';
+
+export {
   createProjectSignal,
   type ProjectSignal,
   type ProjectSignalConfig,
   type EmitInput,
   type WorkRequestInput,
   type LogRecordInput,
+  type ConcernInput,
 } from './client.js';
 
 export {

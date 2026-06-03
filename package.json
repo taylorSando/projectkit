@@ -1,6 +1,6 @@
 {
   "name": "@operator/projectkit",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "description": "Standalone project-signal interface: the project-facing capture/event contract, a sink-agnostic emitter SDK, and the context-handoff protocol. Turns any repo into a testbed that emits work for an agent fleet. Imports NOTHING from control-plane or mesh — mesh is just one optional sink.",
   "type": "module",
   "main": "dist/index.js",
@@ -18,6 +18,10 @@
       "types": "./dist/contract.d.ts",
       "import": "./dist/contract.js"
     },
+    "./dispatch": {
+      "types": "./dist/dispatch.d.ts",
+      "import": "./dist/dispatch.js"
+    },
     "./handoff": {
       "types": "./dist/handoff.d.ts",
       "import": "./dist/handoff.js"
@@ -26,6 +30,8 @@
     "./schemas/work-request.schema.json": "./schemas/work-request.schema.json",
     "./schemas/log-record.schema.json": "./schemas/log-record.schema.json",
     "./schemas/capture-envelope.schema.json": "./schemas/capture-envelope.schema.json",
+    "./schemas/concern.schema.json": "./schemas/concern.schema.json",
+    "./schemas/callback.schema.json": "./schemas/callback.schema.json",
     "./schemas/handoff.schema.json": "./schemas/handoff.schema.json"
   },
   "files": [

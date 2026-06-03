@@ -33,6 +33,14 @@ import {
   type LogRecord,
   type LogEnvelope,
 } from './log.js';
+import {
+  validateConcern,
+  NullDispatchAdapter,
+  type Concern,
+  type DispatchEnvelope,
+  type DispatchAdapter,
+  type Ack,
+} from './dispatch.js';
 import type { EventSink, SinkResult } from './sink.js';
 
 /** Everything except the fields the SDK stamps for you. */
@@ -51,9 +59,21 @@ export type WorkRequestInput = Omit<WorkRequest, 'schema_version' | 'project_key
 export type LogRecordInput = Omit<LogRecord, 'schema_version' | 'project_key' | 'occurred_at'> &
   Partial<Pick<LogRecord, 'occurred_at' | 'project_key'>>;
 
+/** A concern minus the fields the SDK stamps for you. */
+export type ConcernInput = Omit<Concern, 'schema_version' | 'project_key' | 'dispatched_at'> &
+  Partial<Pick<Concern, 'dispatched_at' | 'project_key'>>;
+
 export interface ProjectSignalConfig {
   projectKey: ProjectKey;
   sink: EventSink;
+  /**
+   * The DISPATCH-direction adapter (the other half of the boundary test). A
+   * testbed dispatches Concerns through this; mesh is just ONE implementation
+   * (an HttpDispatchAdapter pointed at its dispatch URL). Defaults to a
+   * NullDispatchAdapter so dispatch is OFF until a host wires one — exactly
+   * like an unset SIGNAL_SINK_URL leaves emit on a NullSink.
+   */
+  dispatchAdapter?: DispatchAdapter;
   /** Defaults merged into every event (e.g. environment, build_sha). */
   defaults?: Partial<ProjectEvent>;
   producer?: { name: string; version?: string };
@@ -95,6 +115,20 @@ export interface ProjectSignal {
    * standalone LogEnvelope from `buildLogEnvelope`).
    */
   log(level: LogLevel, message: string, fields?: Record<string, unknown>): Promise<SinkResult>;
+  /**
+   * DISPATCH a unit of work for execution and get back an Ack (the
+   * dispatch-direction half of the boundary test). Unlike `requestWork`
+   * (fire-and-forget through the EventSink), this routes through the injected
+   * `DispatchAdapter` — mesh is just ONE adapter behind a URL. The eventual
+   * RESULT arrives later as a `Callback` (webhook POST or poll via
+   * `Ack.poll_ref`), keyed by `concern_ref`. Inert under the default
+   * NullDispatchAdapter (dispatch is off, the app keeps working).
+   */
+  dispatch(concern: ConcernInput): Promise<Ack>;
+  /** Dispatch a pre-built batch of concerns through the DispatchAdapter. */
+  dispatchBatch(concerns: ConcernInput[]): Promise<Ack>;
+  /** Build (but do not send) the standalone DispatchEnvelope — the Go-side wire mirror. */
+  buildDispatchEnvelope(concerns: ConcernInput[]): DispatchEnvelope;
   /** Build (but do not send) the wire event envelope — handy for inspection/tests. */
   build(events: EmitInput[]): ProjectEventEnvelope;
   /** Build (but do not send) the standalone WorkRequestEnvelope — the Go-side wire mirror. */
@@ -108,6 +142,7 @@ const defaultNow = () => new Date().toISOString();
 export function createProjectSignal(config: ProjectSignalConfig): ProjectSignal {
   const now = config.now ?? defaultNow;
   const producer = config.producer ?? { name: '@operator/projectkit', version: CONTRACT_VERSION };
+  const dispatchAdapter = config.dispatchAdapter ?? new NullDispatchAdapter();
   const onError =
     config.onError ??
     ((r: SinkResult) => console.warn(`[projectkit] sink ${r.sink} failed: ${r.error ?? r.status}`));
@@ -188,12 +223,49 @@ export function createProjectSignal(config: ProjectSignalConfig): ProjectSignal 
     ...(config.deliveryId ? { delivery_id: config.deliveryId() } : {}),
   });
 
+  const materializeConcern = (input: ConcernInput): Concern => {
+    const concern: Concern = {
+      ...input,
+      schema_version: CONTRACT_VERSION,
+      project_key: input.project_key ?? config.projectKey,
+      dispatched_at: input.dispatched_at ?? now(),
+    };
+    const problems = validateConcern(concern);
+    if (problems.length > 0) {
+      const msg = `[projectkit] invalid concern ${concern.title}: ${problems.join('; ')}`;
+      if (config.strict) throw new Error(msg);
+      onError({ ok: false, sink: 'validation', error: msg }, buildEnvelope([]));
+    }
+    return concern;
+  };
+
+  const buildDispatchEnvelope = (inputs: ConcernInput[]): DispatchEnvelope => ({
+    contract_version: CONTRACT_VERSION,
+    project_key: config.projectKey,
+    dispatched_at: now(),
+    producer,
+    concerns: inputs.map(materializeConcern),
+    ...(config.deliveryId ? { delivery_id: config.deliveryId() } : {}),
+  });
+
   const send = async (inputs: EmitInput[]): Promise<SinkResult> => {
     const events = inputs.map(materialize);
     const envelope = buildEnvelope(events);
     const result = await config.sink.deliver(envelope);
     if (!result.ok) onError(result, envelope);
     return result;
+  };
+
+  const sendDispatch = async (inputs: ConcernInput[]): Promise<Ack> => {
+    const envelope = buildDispatchEnvelope(inputs);
+    const ack = await dispatchAdapter.dispatch(envelope);
+    if (!ack.ok) {
+      onError(
+        { ok: false, sink: ack.adapter, status: ack.status, error: ack.error },
+        buildEnvelope([]),
+      );
+    }
+    return ack;
   };
 
   return {
@@ -250,6 +322,9 @@ export function createProjectSignal(config: ProjectSignalConfig): ProjectSignal 
         } as EmitInput,
       ]);
     },
+    dispatch: (concern) => sendDispatch([concern]),
+    dispatchBatch: (concerns) => sendDispatch(concerns),
+    buildDispatchEnvelope,
     build: (events) => buildEnvelope(events.map(materialize)),
     buildWorkEnvelope,
     buildLogEnvelope,

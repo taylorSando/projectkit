@@ -1,8 +1,8 @@
-# projectkit contract — v1.2.0
+# projectkit contract — v1.3.0
 
 > This is the published interface Agents B (testbeds) and C (flywheel) pin to.
-> Pin a caret range: `"@operator/projectkit": "^0.3.0"` (package), contract
-> semver `1.2.0`. Breaking the wire shape requires a major bump + a migration note here.
+> Pin a caret range: `"@operator/projectkit": "^0.4.0"` (package), contract
+> semver `1.3.0`. Breaking the wire shape requires a major bump + a migration note here.
 
 ## The seam (one inversion)
 
@@ -162,6 +162,83 @@ Optional: `logger`, `source_surface`, `session_id`, `error_code`, `error_message
 `fields` (structured context), `sensitivity`, `redaction_status`. See `src/log.ts` for the
 full list and `schemas/log-record.schema.json` for the cross-language mirror.
 
+## Concern / Dispatch / Callback — v1.3.0
+
+Every surface above is **EMIT-direction**: a testbed says *"this happened"* (`ProjectEvent`),
+*"do this"* (`WorkRequest`), or *"log this"* (`LogRecord`) and FORGETS — fire-and-forget
+through an `EventSink`. v1.3.0 adds the **DISPATCH direction**: the OTHER half of the
+**One-Line Boundary Test**. A testbed DISPATCHES a unit of work for execution and receives a
+`Callback` result back. Before v1.3.0 this lived ENTIRELY inside each testbed's own
+mesh-shaped routes — nhl's `/api/nhl/dispatch` + `/api/workflows` polling, sitelayer's
+mesh-dispatcher — so **mesh was the baked-in owner of dispatch and poll**. With `Concern` /
+`DispatchEnvelope` / `Callback` a testbed dispatches through a sink-agnostic `DispatchAdapter`,
+so **mesh becomes ONE swappable dispatch adapter** behind a URL, exactly like `EventSink` made
+mesh one sink.
+
+**The boundary test:** a testbed can swap mesh for ANOTHER `DispatchAdapter` (a local
+executor, a different fleet, a `NullDispatchAdapter`) WITHOUT changing the `Concern` /
+`DispatchEnvelope` / `Callback` shapes it produces and consumes. mesh is never in the
+testbed's dependency graph — that is the seam.
+
+```ts
+import { createProjectSignal, HttpDispatchAdapter, NullDispatchAdapter } from '@operator/projectkit';
+
+const dispatchUrl = process.env.DISPATCH_ADAPTER_URL;   // mesh is just this URL
+const signal = createProjectSignal({
+  projectKey: 'nhl',
+  sink,                                                  // emit direction (unchanged)
+  dispatchAdapter: dispatchUrl
+    ? new HttpDispatchAdapter({ url: dispatchUrl, sign: (body) => signHmac(body) })  // HMAC injected
+    : new NullDispatchAdapter(),                         // unset → dispatch is OFF, app keeps working
+});
+
+const ack = await signal.dispatch({
+  concern_ref: 'lineup-opt-9f3a',         // producer-stable idempotency key; keys the Callback back
+  kind: 'execute',                        // open string: execute | research | review
+  title: 'Optimize tonight\'s lineup',
+  inputs: { slate: '2026-06-03' },
+  callback: { mode: 'poll' },             // or { url, mode: 'webhook' }
+});
+// ack.poll_ref (poll mode) or a later Callback POST (webhook mode) carries the result.
+```
+
+`dispatch`/`dispatchBatch` route a `DispatchEnvelope` (the Go-side wire mirror is
+`signal.buildDispatchEnvelope([...])`) through the injected `DispatchAdapter`. The eventual
+RESULT arrives as a `Callback` (validated with `validateCallback`), keyed by `concern_ref`.
+`emit` / `log` / `requestWork` are unchanged; dispatch is **inert under the default
+`NullDispatchAdapter`** (dispatch off, the app keeps working).
+
+### Concern — required fields
+
+| field | type | notes |
+|---|---|---|
+| `schema_version` | string | equals `1.3.0` at dispatch (SDK-stamped) |
+| `project_key` | string | OPEN string — no closed roster (SDK-stamped) |
+| `dispatched_at` | string | ISO-8601 (SDK-stamped) |
+| `concern_ref` | string | producer-stable idempotency key — adapter dedupes + keys the Callback back |
+| `kind` | string | open string; well-known `execute` \| `research` \| `review` |
+| `title` | string | short title for the unit of work |
+
+Optional: `summary`, `inputs` (object map), `callback` (`{ url?, mode? }` where `mode` is
+`webhook` \| `poll` \| open), `priority`, `source_event_ref`, `sensitivity`. See `src/dispatch.ts`
+and `schemas/concern.schema.json` (the `DispatchEnvelope` cross-language mirror).
+
+### Callback — required fields
+
+| field | type | notes |
+|---|---|---|
+| `schema_version` | string | equals `1.3.0` at callback |
+| `concern_ref` | string | the Concern this is the result for |
+| `status` | string | `accepted` \| `running` \| `succeeded` \| `failed` \| `cancelled` (CLOSED set) |
+
+Optional: `outputs` (object map), `artifacts[]` (`{ kind, ref }`), `error`, `completed_at`. See
+`src/dispatch.ts` and `schemas/callback.schema.json` for the cross-language mirror.
+
+`HttpDispatchAdapter` (POSTs the `DispatchEnvelope` to a URL, HMAC injected) and
+`NullDispatchAdapter` (accepts + drops) are the dispatch-side analogues of `HttpSink` and
+`NullSink`. `MemoryDispatchAdapter` collects in memory for tests. `mesh` is just one
+`HttpDispatchAdapter`.
+
 ## Handoff protocol — v1.0.0
 
 A structured replacement for hand-written `~/projects/.<repo>-handoff-*.md`. Sections:
@@ -177,6 +254,18 @@ prints the paste-ready next-agent prompt derived from the structure.
   (expand/backfill/contract).
 
 ### Migration log
+- `1.3.0` (2026-06-03) — ADDITIVE: add the DISPATCH-DIRECTION surface (`src/dispatch.ts`:
+  `Concern`, `DispatchEnvelope`, `Ack`, `Callback`, `CallbackArtifact`, `DispatchAdapter`,
+  `validateConcern`, `validateCallback`, plus `HttpDispatchAdapter` / `NullDispatchAdapter` /
+  `MemoryDispatchAdapter`) + `ProjectSignal.dispatch` / `dispatchBatch` / `buildDispatchEnvelope`
+  routed through an injected `DispatchAdapter` (config `dispatchAdapter`, default
+  `NullDispatchAdapter`, inert until a host wires one) + `schemas/concern.schema.json` +
+  `schemas/callback.schema.json` Go-side mirrors. This is the OTHER half of the One-Line Boundary
+  Test: a testbed dispatches a unit of work for execution and gets a Callback result, so mesh
+  becomes ONE swappable dispatch adapter instead of owning the dispatch/poll routes (nhl
+  `/api/nhl/dispatch` + `/api/workflows`, sitelayer mesh-dispatcher). `emit` / `log` / `requestWork`
+  unchanged. No existing field changed; subscribers tolerate `1.0.0`–`1.3.0` (the project-event +
+  work-request schemas' `contract_version` enums widened to include `1.3.0`). Package `0.3.0` → `0.4.0`.
 - `1.2.0` (2026-06-03) — ADDITIVE: add the LogRecord surface (`src/log.ts`: `LogLevel`,
   `LogRecord`, `LogEnvelope`, `validateLogRecord`) + `ProjectSignal.log(level, message, fields?)`
   routing through the same EventSink (inert under `NullSink`) + `signal.buildLogEnvelope` +

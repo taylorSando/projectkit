@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://operator.dev/schemas/work-request-1.2.0.json",
+  "$id": "https://operator.dev/schemas/work-request-1.3.0.json",
   "title": "WorkRequestEnvelope",
-  "description": "projectkit contract v1.2.0 — the project-facing WORK-REQUEST envelope a testbed emits to REQUEST work, and a subscriber (e.g. mesh) validates before minting a task. Cross-language mirror of src/work.ts. A capture-followup request with source_event_ref collapses the capture-task skill's untyped operator_intent decision tree into a typed field. A subscriber tolerates 1.1.0 and 1.2.0 across a rollout.",
+  "description": "projectkit contract v1.3.0 — the project-facing WORK-REQUEST envelope a testbed emits to REQUEST work, and a subscriber (e.g. mesh) validates before minting a task. Cross-language mirror of src/work.ts. A capture-followup request with source_event_ref collapses the capture-task skill's untyped operator_intent decision tree into a typed field. A subscriber tolerates 1.1.0, 1.2.0, and 1.3.0 across a rollout.",
   "type": "object",
   "required": ["contract_version", "project_key", "emitted_at", "producer", "requests"],
   "additionalProperties": false,
   "properties": {
-    "contract_version": { "type": "string", "enum": ["1.1.0", "1.2.0"] },
+    "contract_version": { "type": "string", "enum": ["1.1.0", "1.2.0", "1.3.0"] },
     "project_key": { "type": "string", "minLength": 1 },
     "emitted_at": { "type": "string", "format": "date-time" },
     "delivery_id": { "type": "string" },

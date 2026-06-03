@@ -1,0 +1,32 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://operator.dev/schemas/callback-1.3.0.json",
+  "title": "Callback",
+  "description": "projectkit contract v1.3.0 — the RESULT of executing a dispatched Concern, returned by a dispatch adapter (webhook POST) or fetched by the testbed (poll). Cross-language mirror of src/dispatch.ts (Callback). Keyed by concern_ref back to the originating Concern. This is the return leg that makes dispatch a two-way seam, so mesh is ONE swappable dispatch adapter rather than the owner of dispatch/poll routes. A consumer tolerates 1.3.0.",
+  "type": "object",
+  "required": ["schema_version", "concern_ref", "status"],
+  "additionalProperties": true,
+  "properties": {
+    "schema_version": { "type": "string" },
+    "concern_ref": { "type": "string", "minLength": 1 },
+    "status": {
+      "type": "string",
+      "enum": ["accepted", "running", "succeeded", "failed", "cancelled"]
+    },
+    "outputs": { "type": "object" },
+    "artifacts": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["kind", "ref"],
+        "additionalProperties": true,
+        "properties": {
+          "kind": { "type": "string", "minLength": 1 },
+          "ref": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "error": { "type": "string" },
+    "completed_at": { "type": "string", "format": "date-time" }
+  }
+}

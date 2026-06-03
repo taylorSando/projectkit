@@ -1,0 +1,63 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://operator.dev/schemas/concern-1.3.0.json",
+  "title": "DispatchEnvelope",
+  "description": "projectkit contract v1.3.0 — the project-facing DISPATCH envelope a testbed dispatches to EXECUTE work, and a dispatch adapter (e.g. mesh) validates before running it. Cross-language mirror of src/dispatch.ts (Concern + DispatchEnvelope). The DISPATCH direction is the other half of the One-Line Boundary Test: a testbed dispatches a Concern through a sink-agnostic DispatchAdapter (mesh is ONE swappable implementation behind a URL) and gets a Callback result back, keyed by concern_ref. A subscriber tolerates 1.3.0.",
+  "type": "object",
+  "required": ["contract_version", "project_key", "dispatched_at", "producer", "concerns"],
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": { "type": "string", "enum": ["1.3.0"] },
+    "project_key": { "type": "string", "minLength": 1 },
+    "dispatched_at": { "type": "string", "format": "date-time" },
+    "delivery_id": { "type": "string" },
+    "producer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "concerns": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/Concern" }
+    }
+  },
+  "$defs": {
+    "Concern": {
+      "type": "object",
+      "required": ["schema_version", "project_key", "dispatched_at", "concern_ref", "kind", "title"],
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "string" },
+        "project_key": { "type": "string", "minLength": 1 },
+        "dispatched_at": { "type": "string", "format": "date-time" },
+        "concern_ref": { "type": "string", "minLength": 1 },
+        "kind": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Open string. Well-known: execute | research | review. An adapter narrows on the known ones and routes the rest to a default lane."
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string" },
+        "inputs": { "type": "object" },
+        "callback": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "url": { "type": "string" },
+            "mode": {
+              "type": "string",
+              "description": "Open string. Well-known: webhook | poll."
+            }
+          }
+        },
+        "priority": { "type": "string" },
+        "source_event_ref": { "type": "string" },
+        "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] }
+      }
+    }
+  }
+}
