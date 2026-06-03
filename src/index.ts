@@ -40,10 +40,19 @@ export {
 } from './sink.js';
 
 export {
+  validateWorkRequest,
+  type WorkIntent,
+  type WorkPriority,
+  type WorkRequest,
+  type WorkRequestEnvelope,
+} from './work.js';
+
+export {
   createProjectSignal,
   type ProjectSignal,
   type ProjectSignalConfig,
   type EmitInput,
+  type WorkRequestInput,
 } from './client.js';
 
 export {

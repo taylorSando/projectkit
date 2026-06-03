@@ -20,7 +20,7 @@ import {
 const fixedNow = () => '2026-06-03T20:00:00.000Z';
 
 test('contract version is pinned', () => {
-  assert.equal(CONTRACT_VERSION, '1.0.0');
+  assert.equal(CONTRACT_VERSION, '1.1.0');
 });
 
 test('emit materializes a valid wire event through the sink', async () => {

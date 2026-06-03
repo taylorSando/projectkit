@@ -1,0 +1,57 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://operator.dev/schemas/work-request-1.1.0.json",
+  "title": "WorkRequestEnvelope",
+  "description": "projectkit contract v1.1.0 — the project-facing WORK-REQUEST envelope a testbed emits to REQUEST work, and a subscriber (e.g. mesh) validates before minting a task. Cross-language mirror of src/work.ts. A capture-followup request with source_event_ref collapses the capture-task skill's untyped operator_intent decision tree into a typed field.",
+  "type": "object",
+  "required": ["contract_version", "project_key", "emitted_at", "producer", "requests"],
+  "additionalProperties": false,
+  "properties": {
+    "contract_version": { "type": "string", "enum": ["1.1.0"] },
+    "project_key": { "type": "string", "minLength": 1 },
+    "emitted_at": { "type": "string", "format": "date-time" },
+    "delivery_id": { "type": "string" },
+    "producer": {
+      "type": "object",
+      "required": ["name"],
+      "properties": {
+        "name": { "type": "string" },
+        "version": { "type": "string" }
+      },
+      "additionalProperties": false
+    },
+    "requests": {
+      "type": "array",
+      "items": { "$ref": "#/$defs/WorkRequest" }
+    }
+  },
+  "$defs": {
+    "WorkRequest": {
+      "type": "object",
+      "required": ["schema_version", "project_key", "requested_at", "request_ref", "intent", "title"],
+      "additionalProperties": true,
+      "properties": {
+        "schema_version": { "type": "string" },
+        "project_key": { "type": "string", "minLength": 1 },
+        "requested_at": { "type": "string", "format": "date-time" },
+        "request_ref": { "type": "string", "minLength": 1 },
+        "intent": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Well-known: fix | investigate | replicate | review | research | capture-followup. Open string fallback for project-specific intents."
+        },
+        "title": { "type": "string", "minLength": 1 },
+        "summary": { "type": "string" },
+        "priority": { "type": "string" },
+        "acceptance": { "type": "array", "items": { "type": "string" } },
+        "route_path": { "type": "string" },
+        "entity_kind": { "type": "string" },
+        "entity_id": { "type": ["string", "number", "null"] },
+        "source_event_ref": { "type": "string" },
+        "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] },
+        "links": { "type": "array", "items": { "type": "string" } },
+        "payload": { "type": "object" }
+      }
+    }
+  }
+}
