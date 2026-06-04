@@ -57,6 +57,7 @@ npx handoff resume handoff.json                          # print the paste-ready
 - `@operator/projectkit` — everything (one-import convenience)
 - `@operator/projectkit/contract` — just the wire types + `validateProjectEvent`
 - `@operator/projectkit/handoff` — just the handoff protocol
+- `@operator/projectkit/git-ref-sink` — `GitRefSink` (node-only): deliver the same envelope to an append-only git ref instead of HTTP. The boundary test made concrete — git-as-substrate proves mesh is a swappable subscriber, not the owner.
 - `schemas/project-event.schema.json`, `schemas/handoff.schema.json` — cross-language mirrors (Go/etc.)
 
 ## The contract
