@@ -18,7 +18,29 @@ a sink-agnostic emitter SDK, and the context-handoff protocol — owning **nothi
  control-plane + mesh   ── one subscriber, replaceable, self-hostable
 ```
 
-## Install / build
+## Depend on this (testbeds + mesh)
+
+This package is **not published to a registry** — it's consumed as a **git-tag dependency**
+(stays private + git-based, no npm/registry infra). Pin a tag in the consumer's `package.json`:
+
+```jsonc
+// package.json
+"dependencies": {
+  "@operator/projectkit": "git+ssh://git@bitbucket.org/taylor_sando/projectkit.git#v0.5.1"
+}
+```
+
+```sh
+npm install   # the `prepare` script builds dist/ on install (git deps run prepare, not prepack)
+```
+
+Use **`#v0.5.1` or later** for git-dep consumption — earlier tags lack the `prepare`
+hook, so `dist/` wouldn't build on install (`dist/` is gitignored). Bump the pinned tag
+to adopt a wider contract (`#v0.5.1` carries `CONTRACT_VERSION 1.3.0`). Subscribers narrow
+on `contract_version`, so a consumer on an older tag keeps working — mesh already ingests
+both `1.0.0` and `1.3.0`.
+
+## Build it (developing projectkit itself)
 
 ```sh
 npm install      # zero runtime deps; typescript is the only devDep
