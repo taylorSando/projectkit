@@ -239,6 +239,25 @@ Optional: `outputs` (object map), `artifacts[]` (`{ kind, ref }`), `error`, `com
 `NullSink`. `MemoryDispatchAdapter` collects in memory for tests. `mesh` is just one
 `HttpDispatchAdapter`.
 
+## Artifact sinks — where dock MEDIA goes (v1.4.0)
+
+`EventSink` is where structured EVENTS go; `ArtifactSink` is where capture-dock MEDIA
+(audio/video/screenshots) goes. An `Artifact` is `{ kind, sessionId, contentType, bytes
+(Uint8Array) | ref, metadata? }`; `put(artifact)` returns an `ArtifactSinkResult`
+(`{ ok, sink, ref?, status?, error? }`) mirroring `SinkResult` conventions.
+
+- `NullArtifactSink` — persists nothing, returns the inline ref `inline:<kind>:<sessionId>`.
+  This formalizes today's dock default and is **capture-off-safe**: the dock keeps working
+  with no blob store wired.
+- `HttpArtifactSink` — PUTs (or POSTs) the raw bytes to a configurable blob-store URL,
+  content-type from the artifact, with HMAC/auth INJECTED via `sign` (never baked in) and a
+  `timeoutMs` default of 8000 — exactly like `HttpSink`. `mesh` is just one `HttpArtifactSink`.
+- `MemoryArtifactSink` / `FanoutArtifactSink` are the test / tee analogues of `MemorySink` /
+  `FanoutSink`.
+
+See `src/artifact-sink.ts`. Browser-safe (uses only `fetch`/`Uint8Array`), so it is exported
+from the package root and also from the `@operator/projectkit/artifact-sink` subpath.
+
 ## Handoff protocol — v1.0.0
 
 A structured replacement for hand-written `~/projects/.<repo>-handoff-*.md`. Sections:
@@ -254,6 +273,18 @@ prints the paste-ready next-agent prompt derived from the structure.
   (expand/backfill/contract).
 
 ### Migration log
+- `1.4.0` (2026-06-06) — ADDITIVE: add the ARTIFACT-SINK surface (`src/artifact-sink.ts`:
+  `Artifact`, `ArtifactSink`, `ArtifactSinkResult`, `inlineArtifactRef`, plus
+  `NullArtifactSink` / `MemoryArtifactSink` / `HttpArtifactSink` / `FanoutArtifactSink` and
+  `HttpArtifactSinkOptions`), re-exported from the package root and the
+  `@operator/projectkit/artifact-sink` subpath. This is the MEDIA analogue of `EventSink`:
+  the capture dock can now STORE blob media (audio/video/screenshots) through a sink-agnostic
+  `ArtifactSink` instead of only returning the inline ref `inline:<kind>:<sessionId>`.
+  `NullArtifactSink` formalizes that inline-ref default (capture-off-safe); `HttpArtifactSink`
+  PUTs/POSTs bytes to a configurable blob store with HMAC injected via `sign` (never baked in),
+  so mesh becomes ONE swappable artifact sink, exactly as it is one `EventSink`. No existing
+  field, type, or behavior changed; the fail-closed invariant covers the new file (zero runtime
+  deps, no mesh/control-plane/@operator/types import). Package `0.5.1` → `0.6.0`.
 - `1.3.0` (2026-06-03) — ADDITIVE: add the DISPATCH-DIRECTION surface (`src/dispatch.ts`:
   `Concern`, `DispatchEnvelope`, `Ack`, `Callback`, `CallbackArtifact`, `DispatchAdapter`,
   `validateConcern`, `validateCallback`, plus `HttpDispatchAdapter` / `NullDispatchAdapter` /

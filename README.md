@@ -80,6 +80,7 @@ npx handoff resume handoff.json                          # print the paste-ready
 - `@operator/projectkit/contract` — just the wire types + `validateProjectEvent`
 - `@operator/projectkit/handoff` — just the handoff protocol
 - `@operator/projectkit/git-ref-sink` — `GitRefSink` (node-only): deliver the same envelope to an append-only git ref instead of HTTP. The boundary test made concrete — git-as-substrate proves mesh is a swappable subscriber, not the owner.
+- `@operator/projectkit/artifact-sink` — `ArtifactSink` (also re-exported from the root barrel; browser-safe): where capture-dock MEDIA (audio/video/screenshots) goes, the analogue of `EventSink` for blobs. `NullArtifactSink` returns the inline ref (`inline:<kind>:<sessionId>`) and is capture-off-safe; `HttpArtifactSink` PUTs/POSTs bytes to a blob store with HMAC injected, never baked in. Mesh is just one artifact sink.
 - `schemas/project-event.schema.json`, `schemas/handoff.schema.json` — cross-language mirrors (Go/etc.)
 
 ## The contract

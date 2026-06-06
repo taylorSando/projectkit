@@ -40,6 +40,18 @@ export {
 } from './sink.js';
 
 export {
+  NullArtifactSink,
+  MemoryArtifactSink,
+  HttpArtifactSink,
+  FanoutArtifactSink,
+  inlineArtifactRef,
+  type Artifact,
+  type ArtifactSink,
+  type ArtifactSinkResult,
+  type HttpArtifactSinkOptions,
+} from './artifact-sink.js';
+
+export {
   validateWorkRequest,
   type WorkIntent,
   type WorkPriority,
