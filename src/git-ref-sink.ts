@@ -26,6 +26,7 @@
  */
 
 import { spawn } from 'node:child_process';
+import type { GitStreamError } from 'node:child_process';
 import type { ProjectEventEnvelope } from './contract.js';
 import type { EventSink, SinkResult } from './sink.js';
 
@@ -146,9 +147,42 @@ export class GitRefSink implements EventSink {
       child.stderr.on('data', (d) => (stderr += d.toString()));
       child.on('error', (e) => resolve({ code: -1, stdout, stderr: stderr + e.message }));
       child.on('close', (code) => resolve({ code: code ?? -1, stdout, stderr }));
-      child.stdin.end(input ?? '');
+      // Feed stdin and close it. git can exit (and tear down its stdin pipe)
+      // before this write flushes — e.g. `rev-parse`/`update-ref` ignore stdin —
+      // which surfaces as EPIPE/ERR_STREAM_DESTROYED on this stream. The command's
+      // real outcome is already determined by its exit code + stdout, so a stdin
+      // write race must NOT reject the whole call: swallow it here. An explicit
+      // 'error' handler is required regardless, since an unhandled stream 'error'
+      // would otherwise crash the process. Happy-path behavior is unchanged.
+      child.stdin.on('error', (e: GitStreamError) => {
+        if (!isBenignStdinError(e)) {
+          resolve({ code: -1, stdout, stderr: stderr + e.message });
+        }
+      });
+      try {
+        if (child.stdin.writable) {
+          child.stdin.end(input ?? '');
+        } else {
+          child.stdin.destroy();
+        }
+      } catch (e) {
+        const err = e as GitStreamError;
+        if (!isBenignStdinError(err)) {
+          resolve({ code: -1, stdout, stderr: stderr + err.message });
+        }
+      }
     });
   }
+}
+
+/**
+ * True for the stdin-write race errors that are NOT real failures: git exited
+ * before our `stdin.end()` flushed, tearing down the pipe. The command's outcome
+ * is fully captured by its exit code + stdout, so these must be swallowed rather
+ * than rejecting the call. Any other stream error is real and propagates.
+ */
+function isBenignStdinError(e: GitStreamError): boolean {
+  return e.code === 'EPIPE' || e.code === 'ERR_STREAM_DESTROYED';
 }
 
 function signalMessage(env: ProjectEventEnvelope): string {

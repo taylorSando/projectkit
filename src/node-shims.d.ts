@@ -14,10 +14,23 @@ declare module 'node:child_process' {
   interface GitStream {
     on(event: 'data', listener: (chunk: { toString(): string }) => void): void;
   }
+  // An error that may carry a POSIX `code` (e.g. 'EPIPE') like Node's
+  // NodeJS.ErrnoException, which is unavailable here since the package ships no
+  // `@types/node`.
+  interface GitStreamError {
+    message: string;
+    code?: string;
+  }
+  interface GitStdin {
+    writable: boolean;
+    end(data?: string): void;
+    destroy(): void;
+    on(event: 'error', listener: (err: GitStreamError) => void): void;
+  }
   interface GitChild {
     stdout: GitStream;
     stderr: GitStream;
-    stdin: { end(data?: string): void };
+    stdin: GitStdin;
     on(event: 'error', listener: (err: { message: string }) => void): void;
     on(event: 'close', listener: (code: number | null) => void): void;
   }
