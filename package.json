@@ -56,8 +56,13 @@
     "schemas",
     "bin",
     "README.md",
-    "CONTRACT.md"
+    "CONTRACT.md",
+    "LICENSE"
   ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com",
+    "access": "restricted"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit",

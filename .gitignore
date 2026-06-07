@@ -3,3 +3,5 @@ dist/
 *.log
 *.tgz
 .DS_Store
+# Real .npmrc may carry an authToken — never commit it. Commit .npmrc.example only.
+.npmrc

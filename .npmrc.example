@@ -1,0 +1,26 @@
+# .npmrc template for @operator/projectkit + @operator/capture-overlay (GitHub Packages)
+#
+# COPY this to `.npmrc` (which is gitignored) on any machine / CI sandbox that
+# needs to INSTALL or PUBLISH the @operator scope from GitHub Packages.
+#
+# DO NOT commit a real token. The authToken is read from an env var so the file
+# itself stays secret-free and safe to template into CI. See
+# docs/registry-migration.md for exactly how each sandbox supplies the token.
+#
+# ── Scope -> registry routing ────────────────────────────────────────────────
+# Only the @operator scope goes to GitHub Packages; everything else stays on the
+# public npm registry. This is deliberate: it keeps `npm install` fast for the
+# public dep tree and only auth-gates the private scope.
+@operator:registry=https://npm.pkg.github.com
+
+# ── Auth ─────────────────────────────────────────────────────────────────────
+# GitHub Packages authenticates with a token in the `_authToken` of the registry
+# host line. We resolve it from ${NPM_TOKEN} so the file carries no secret.
+# The token must have the `read:packages` scope to install, and additionally
+# `write:packages` to publish (classic PAT) — or the equivalent fine-grained
+# "Packages: read/write" permission.
+//npm.pkg.github.com/:_authToken=${NPM_TOKEN}
+
+# always-auth ensures the token is sent even for metadata/tarball GETs that npm
+# would otherwise attempt anonymously (anonymous GETs 404 on a private scope).
+//npm.pkg.github.com/:always-auth=true
