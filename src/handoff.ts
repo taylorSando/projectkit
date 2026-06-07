@@ -2,7 +2,7 @@
  * projectkit — the context-handoff protocol.
  *
  * Today an agent hands off by writing a markdown file by hand (e.g.
- * ~/projects/.sitelayer-handoff-2026-06-02.md) and the operator pastes a
+ * `.<project>-handoff-<date>.md`) and the operator pastes a
  * prompt. This productizes that: a structured, validatable Handoff that any
  * agent in any repo can emit and the next agent can ingest + resume — with a
  * deterministic `resume_prompt` derived from the structure.

@@ -260,7 +260,7 @@ from the package root and also from the `@operator/projectkit/artifact-sink` sub
 
 ## Handoff protocol — v1.0.0
 
-A structured replacement for hand-written `~/projects/.<repo>-handoff-*.md`. Sections:
+A structured replacement for hand-written `.<repo>-handoff-*.md` files. Sections:
 environment & hard rules → live state → immediate task → procedure → gotchas →
 operator-gated → links. CLI: `handoff new|validate|show|resume`. `handoff resume <file>`
 prints the paste-ready next-agent prompt derived from the structure.

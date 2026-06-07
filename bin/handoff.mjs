@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
  * handoff — the context-handoff CLI. Productizes the hand-written
- * ~/projects/.<repo>-handoff-*.md ritual into a structured, resumable artifact.
+ * `.<repo>-handoff-*.md` ritual into a structured, resumable artifact.
  *
  *   handoff new --project sitelayer --title "Sitelayer — Agent Handoff" [--out handoff.json]
  *   handoff validate <handoff.json>
@@ -39,7 +39,7 @@ switch (cmd) {
     if (!project) die('handoff new: --project is required');
     const h = newHandoff(project, title);
     h.summary = 'TODO: one-paragraph "where we are / what you are taking over".';
-    h.environment.repo = arg('--repo', `~/projects/${project}`);
+    h.environment.repo = arg('--repo', 'TODO: repo path or name (e.g. /path/to/repo or myorg/myrepo).');
     h.environment.hard_rules = ['TODO: project-specific hard rules (e.g. required env prefixes, "PROD never auto-deploys").'];
     h.live_state = ['TODO: verifiable current-state bullets (SHAs, live URLs, what landed).'];
     h.gotchas = [{ note: 'TODO: the thing that will bite the next agent.', severity: 'warn' }];
