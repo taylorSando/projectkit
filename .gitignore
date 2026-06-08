@@ -1,5 +1,8 @@
 node_modules/
-dist/
+# dist/ is COMMITTED on purpose: testbeds consume @operator/projectkit via a
+# git-ref dependency (github:taylorSando/projectkit#vX.Y.Z), and a committed
+# dist/ makes a fresh `npm install` need NO build step / TS toolchain on the
+# consumer (matches the @operator/types precedent). Rebuild via `npm run build`.
 *.log
 *.tgz
 .DS_Store
