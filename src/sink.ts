@@ -92,7 +92,13 @@ export class HttpSink implements EventSink {
     if (!opts.url) throw new Error('HttpSink requires a url');
     const f = opts.fetchImpl ?? (globalThis.fetch as typeof fetch | undefined);
     if (!f) throw new Error('HttpSink: no fetch available; pass opts.fetchImpl');
-    this.fetchImpl = f;
+    // Bind to the global scope. We store the impl as an instance field and call
+    // it below as `this.fetchImpl(...)`, which would otherwise invoke `fetch`
+    // with `this === this HttpSink` — and the browser's native `fetch` throws
+    // "Illegal invocation" unless `this` is the Window/global. (Node's fetch
+    // tolerates any `this`, so this only bit in the browser.) Binding makes the
+    // method-call form safe regardless of how the impl is invoked.
+    this.fetchImpl = f.bind(globalThis);
     this.name = opts.name ?? `http(${safeHost(opts.url)})`;
   }
 
