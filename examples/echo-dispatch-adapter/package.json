@@ -1,0 +1,19 @@
+{
+  "name": "echo-dispatch-adapter",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "A second, NON-MESH @operator/projectkit dispatch executor — the executable proof of the One-Line Boundary Test. Accepts a DispatchEnvelope on POST /api/projectkit/concerns, validates every Concern with the published validateConcern, and returns the projectkit Ack shape (plus the poll/Callback shape on GET). Imports nothing from mesh/control-plane.",
+  "bin": {
+    "echo-dispatch-adapter": "server.mjs"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  },
+  "dependencies": {
+    "@operator/projectkit": "github:taylorSando/projectkit#v0.7.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
