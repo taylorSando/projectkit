@@ -298,3 +298,39 @@ test('a Concern built via buildDispatchEnvelope satisfies the concern schema req
     assert.ok(req in c, `built concern missing required field: ${req}`);
   }
 });
+
+// Regression: the browser's native fetch throws "Illegal invocation" when called
+// with a non-global `this`. HttpDispatchAdapter calls `this.fetchImpl(...)`, so it
+// MUST bind fetch to the global. strictFetch simulates the browser.
+test('HttpDispatchAdapter binds fetch to globalThis (no "Illegal invocation" in the browser)', async () => {
+  function strictFetch() {
+    if (this !== globalThis) throw new TypeError('Failed to execute \'fetch\': Illegal invocation');
+    return new Response(JSON.stringify({ accepted: true, concern_ref: 'cb-bound' }), {
+      status: 200,
+      headers: { 'content-type': 'application/json' },
+    });
+  }
+  const adapter = new HttpDispatchAdapter({ url: 'https://nhl/dispatch', fetchImpl: strictFetch });
+  const ack = await adapter.dispatch({
+    schema_version: CONTRACT_VERSION,
+    dispatched_at: fixedNow(),
+    concerns: [
+      {
+        schema_version: CONTRACT_VERSION,
+        project_key: 'nhl',
+        dispatched_at: fixedNow(),
+        concern_ref: 'cb-bound',
+        kind: 'execute',
+        title: 'bind check',
+        summary: 'ensure fetch is bound',
+        inputs: {},
+        callback: { url: 'https://nhl/cb', mode: 'webhook' },
+        priority: 'normal',
+        sensitivity: 'internal',
+      },
+    ],
+  });
+  assert.equal(ack.ok, true);
+  assert.equal(ack.accepted, 1);
+  assert.equal(ack.concern_ref, 'cb-bound');
+});

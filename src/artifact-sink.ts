@@ -131,7 +131,11 @@ export class HttpArtifactSink implements ArtifactSink {
     if (!opts.url) throw new Error('HttpArtifactSink requires a url');
     const f = opts.fetchImpl ?? (globalThis.fetch as typeof fetch | undefined);
     if (!f) throw new Error('HttpArtifactSink: no fetch available; pass opts.fetchImpl');
-    this.fetchImpl = f;
+    // Bind to the global scope: calling `this.fetchImpl(...)` would otherwise
+    // invoke the browser's native `fetch` with `this === HttpArtifactSink`, which
+    // throws "Illegal invocation" (Node's fetch tolerates any `this`, so this only
+    // bit in the browser). Mirrors HttpSink.
+    this.fetchImpl = f.bind(globalThis);
     this.name = opts.name ?? `http-artifact(${safeHost(opts.url)})`;
   }
 

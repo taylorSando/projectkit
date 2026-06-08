@@ -212,3 +212,18 @@ test('FanoutArtifactSink reports ok:false when any leg fails', async () => {
 test('subpath export exposes the same HttpArtifactSink class as the barrel', () => {
   assert.equal(HttpArtifactSinkSubpath, HttpArtifactSink);
 });
+
+// Regression: the browser's native fetch throws "Illegal invocation" when called
+// with a `this` that is not the Window/global. HttpArtifactSink stores fetch as an
+// instance field and calls it as `this.fetchImpl(...)`, so it MUST bind to the
+// global. strictFetch below simulates the browser by rejecting any non-global `this`.
+test('HttpArtifactSink binds fetch to globalThis (no "Illegal invocation" in the browser)', async () => {
+  function strictFetch() {
+    if (this !== globalThis) throw new TypeError('Failed to execute \'fetch\': Illegal invocation');
+    return new Response('', { status: 201, headers: { location: 'https://blob.example/o/bound' } });
+  }
+  const sink = new HttpArtifactSink({ url: 'https://blob.example/upload', fetchImpl: strictFetch });
+  const res = await sink.put(makeArtifact());
+  assert.equal(res.ok, true);
+  assert.equal(res.ref, 'https://blob.example/o/bound');
+});

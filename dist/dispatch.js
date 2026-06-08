@@ -172,7 +172,11 @@ export class HttpDispatchAdapter {
         const f = opts.fetchImpl ?? globalThis.fetch;
         if (!f)
             throw new Error('HttpDispatchAdapter: no fetch available; pass opts.fetchImpl');
-        this.fetchImpl = f;
+        // Bind to the global scope: calling `this.fetchImpl(...)` would otherwise
+        // invoke the browser's native `fetch` with `this === HttpDispatchAdapter`,
+        // which throws "Illegal invocation" (Node's fetch tolerates any `this`, so
+        // this only bit in the browser). Mirrors HttpSink.
+        this.fetchImpl = f.bind(globalThis);
         this.name = opts.name ?? `http(${safeHost(opts.url)})`;
     }
     async dispatch(envelope) {
