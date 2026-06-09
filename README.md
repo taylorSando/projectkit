@@ -21,12 +21,13 @@ a sink-agnostic emitter SDK, and the context-handoff protocol — owning **nothi
 ## Depend on this (testbeds + mesh)
 
 This package is **not published to a registry** — it's consumed as a **git-tag dependency**
-(stays private + git-based, no npm/registry infra). Pin a tag in the consumer's `package.json`:
+(stays private + git-based, no npm/registry infra). Pin a tag in the consumer's `package.json`
+(GitHub short form, the pattern the testbeds use; the Bitbucket `git+ssh://` form works too):
 
 ```jsonc
 // package.json
 "dependencies": {
-  "@operator/projectkit": "git+ssh://git@bitbucket.org/taylor_sando/projectkit.git#v0.5.1"
+  "@operator/projectkit": "github:taylorSando/projectkit#v0.7.1"
 }
 ```
 
@@ -35,10 +36,11 @@ npm install   # the `prepare` script builds dist/ on install (git deps run prepa
 ```
 
 Use **`#v0.5.1` or later** for git-dep consumption — earlier tags lack the `prepare`
-hook, so `dist/` wouldn't build on install (`dist/` is gitignored). Bump the pinned tag
-to adopt a wider contract (`#v0.5.1` carries `CONTRACT_VERSION 1.3.0`). Subscribers narrow
-on `contract_version`, so a consumer on an older tag keeps working — mesh already ingests
-both `1.0.0` and `1.3.0`.
+hook, so `dist/` wouldn't build on install (`dist/` is gitignored). All 5 testbeds
+(chess/nhl/learn/winwar/sandolab) currently pin **`#v0.7.1`** (carries `CONTRACT_VERSION
+1.3.0` + the browser `fetchImpl` bind fix); the latest tag is **`v0.8.0`** (adds
+`bin/local-executor.mjs`, no wire change). Subscribers narrow on `contract_version`, so a
+consumer on an older tag keeps working — mesh already ingests `1.0.0` through `1.3.0`.
 
 ## Build it (developing projectkit itself)
 

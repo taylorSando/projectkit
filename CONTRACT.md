@@ -1,8 +1,12 @@
 # projectkit contract — v1.3.0
 
 > This is the published interface Agents B (testbeds) and C (flywheel) pin to.
-> Pin a caret range: `"@operator/projectkit": "^0.4.0"` (package), contract
-> semver `1.3.0`. Breaking the wire shape requires a major bump + a migration note here.
+> Pin a git tag: `"@operator/projectkit": "github:taylorSando/projectkit#v0.7.1"`
+> (the current testbed pin; latest tag `v0.8.0`). The **wire contract is `1.3.0`**
+> (`CONTRACT_VERSION` in `src/contract.ts`) — this is the version mesh vendors
+> byte-identical mirrors of (`mesh/core/contracts/projectkit/*-1.3.0.json`).
+> Package versions above `0.4.0` add behavior without changing the wire.
+> Breaking the wire shape requires a major bump + a migration note here.
 
 ## The seam (one inversion)
 
@@ -237,9 +241,13 @@ Optional: `outputs` (object map), `artifacts[]` (`{ kind, ref }`), `error`, `com
 `HttpDispatchAdapter` (POSTs the `DispatchEnvelope` to a URL, HMAC injected) and
 `NullDispatchAdapter` (accepts + drops) are the dispatch-side analogues of `HttpSink` and
 `NullSink`. `MemoryDispatchAdapter` collects in memory for tests. `mesh` is just one
-`HttpDispatchAdapter`.
+`HttpDispatchAdapter` — and `bin/local-executor.mjs` (v0.8.0) is the second **real**
+backend behind the same two routes, proving the swap: `test/local-executor.test.mjs`
+dispatches the same Concern through `HttpDispatchAdapter` at local-executor and at a
+mesh-shaped door and asserts identical Concern / Ack / Callback shapes (the One-Line
+Boundary Test, executable).
 
-## Artifact sinks — where dock MEDIA goes (v1.4.0)
+## Artifact sinks — where dock MEDIA goes (package 0.6.0; wire unchanged at 1.3.0)
 
 `EventSink` is where structured EVENTS go; `ArtifactSink` is where capture-dock MEDIA
 (audio/video/screenshots) goes. An `Artifact` is `{ kind, sessionId, contentType, bytes
@@ -273,7 +281,19 @@ prints the paste-ready next-agent prompt derived from the structure.
   (expand/backfill/contract).
 
 ### Migration log
-- `1.4.0` (2026-06-06) — ADDITIVE: add the ARTIFACT-SINK surface (`src/artifact-sink.ts`:
+- package `0.8.0` (2026-06-09, wire unchanged at `1.3.0`) — add `bin/local-executor.mjs`,
+  a standalone zero-dep HTTP executor for the DISPATCH direction: the second REAL
+  non-mesh `DispatchAdapter` backend (same two routes as mesh's door, byte-compatible
+  with the vendored schemas, really executes Concerns via `LOCAL_EXECUTOR_CMD`).
+  `test/local-executor.test.mjs` carries the executable swap test. No type or wire change.
+- package `0.7.x` (2026-06-08/09, wire unchanged at `1.3.0`) — `0.7.0` work-item LIFECYCLE
+  surface (`src/worklifecycle.ts`: pure, storage-agnostic state machine + `WorkItemStore`
+  port lifted from sitelayer's `context_work_items`; no new transport envelope) + committed
+  `dist/` for git-ref consumption (`github:taylorSando/projectkit#vX.Y.Z`); `0.7.1` binds
+  `fetchImpl` to `globalThis` in `HttpSink` / `HttpArtifactSink` / `HttpDispatchAdapter`
+  (fixes browser "Illegal invocation" that silently broke every browser-side capture
+  dock). Behavior only; no wire change. **`0.7.1` is the current testbed pin.**
+- package `0.6.0` (2026-06-06, wire unchanged at `1.3.0`) — ADDITIVE: add the ARTIFACT-SINK surface (`src/artifact-sink.ts`:
   `Artifact`, `ArtifactSink`, `ArtifactSinkResult`, `inlineArtifactRef`, plus
   `NullArtifactSink` / `MemoryArtifactSink` / `HttpArtifactSink` / `FanoutArtifactSink` and
   `HttpArtifactSinkOptions`), re-exported from the package root and the
