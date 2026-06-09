@@ -74,6 +74,33 @@ npx handoff show handoff.json                            # render the human mark
 npx handoff resume handoff.json                          # print the paste-ready next-agent prompt
 ```
 
+## local-executor (a second REAL dispatch backend)
+
+`bin/local-executor.mjs` is a standalone, zero-dependency HTTP executor for the
+DISPATCH-direction contract — the non-mesh backend that makes the One-Line
+Boundary Test executable against something real. It speaks the same two routes
+mesh's door speaks (`POST /api/projectkit/concerns`, `GET
+/api/projectkit/concerns/:pollRef`), but instead of minting a task it REALLY
+RUNS each accepted Concern as a local one-shot process and drives the Callback
+through `accepted → running → succeeded|failed` with the process's real output.
+
+```sh
+npx local-executor                                  # PORT=8790, safe echo stub
+LOCAL_EXECUTOR_CMD='claude -p "$CONCERN_TITLE — $CONCERN_SUMMARY"' npx local-executor
+```
+
+Point any testbed at it by changing ONE url (e.g.
+`MESH_CONCERN_DISPATCH_URL=http://127.0.0.1:8790/api/projectkit/concerns`) —
+the Concern / Ack / Callback shapes do not change. The executor command gets
+the Concern via env (`CONCERN_REF/KIND/TITLE/SUMMARY/PROJECT_KEY/INPUTS_JSON`)
+and the full Concern JSON on stdin; exit 0 ⇒ `succeeded`, non-zero ⇒ `failed`;
+a stdout line `::artifact::<kind>::<ref>` becomes a `CallbackArtifact`.
+Idempotent on `(project_key, concern_ref)` with the same deterministic `pkc_`
+poll handle mesh mints. Auth is off by default for local use; set
+`LOCAL_EXECUTOR_HMAC_SECRET_HEX` (+ optional `LOCAL_EXECUTOR_HMAC_COMPONENT`)
+to require the same component-HMAC headers `meshHmacSigner` produces.
+`test/local-executor.test.mjs` carries the executable swap test.
+
 ## Surface
 
 - `@operator/projectkit` — everything (one-import convenience)
