@@ -77,8 +77,8 @@ const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_HMAC_SKEW_S = 300;
 // Tolerated contract versions — the same subscriber posture as mesh's door
 // (a producer pins its version; the executor tolerates the supported range).
-const SUPPORTED_CONTRACT_VERSIONS = new Set(['1.0.0', '1.1.0', '1.2.0', '1.3.0']);
-const LATEST_CONTRACT_VERSION = '1.3.0';
+const SUPPORTED_CONTRACT_VERSIONS = new Set(['1.0.0', '1.1.0', '1.2.0', '1.3.0', '1.4.0']);
+const LATEST_CONTRACT_VERSION = '1.4.0';
 
 /**
  * Deterministic opaque poll handle for a Concern — the SAME derivation mesh

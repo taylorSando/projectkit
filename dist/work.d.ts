@@ -59,6 +59,13 @@ export interface WorkRequest {
     summary?: string;
     priority?: WorkPriority;
     acceptance?: string[];
+    /**
+     * Which subscriber pool / feed lane should pick this up — e.g. `mesh`,
+     * `capture-analyzer`, `steve`. Open string; mirrors `Concern.audience`. (v1.4.0)
+     */
+    audience?: string;
+    /** Person/agent identity accountable for the work, e.g. `steve`. (v1.4.0) */
+    assignee?: string;
     route_path?: string;
     entity_kind?: string;
     entity_id?: string | number | null;

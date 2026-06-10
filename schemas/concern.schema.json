@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://operator.dev/schemas/concern-1.3.0.json",
+  "$id": "https://operator.dev/schemas/concern-1.4.0.json",
   "title": "DispatchEnvelope",
-  "description": "projectkit contract v1.3.0 — the project-facing DISPATCH envelope a testbed dispatches to EXECUTE work, and a dispatch adapter (e.g. mesh) validates before running it. Cross-language mirror of src/dispatch.ts (Concern + DispatchEnvelope). The DISPATCH direction is the other half of the One-Line Boundary Test: a testbed dispatches a Concern through a sink-agnostic DispatchAdapter (mesh is ONE swappable implementation behind a URL) and gets a Callback result back, keyed by concern_ref. A subscriber tolerates 1.3.0.",
+  "description": "projectkit contract v1.4.0 — the project-facing DISPATCH envelope a testbed dispatches to EXECUTE work, and a dispatch adapter (e.g. mesh) validates before running it. Cross-language mirror of src/dispatch.ts (Concern + DispatchEnvelope). The DISPATCH direction is the other half of the One-Line Boundary Test: a testbed dispatches a Concern through a sink-agnostic DispatchAdapter (mesh is ONE swappable implementation behind a URL) and gets a Callback result back, keyed by concern_ref. A subscriber tolerates 1.3.0–1.4.0. v1.4.0 adds optional audience/assignee (addressed dispatch) and acceptance (success criteria) to Concern.",
   "type": "object",
   "required": ["contract_version", "project_key", "dispatched_at", "producer", "concerns"],
   "additionalProperties": false,
   "properties": {
-    "contract_version": { "type": "string", "enum": ["1.3.0"] },
+    "contract_version": { "type": "string", "enum": ["1.3.0", "1.4.0"] },
     "project_key": { "type": "string", "minLength": 1 },
     "dispatched_at": { "type": "string", "format": "date-time" },
     "delivery_id": { "type": "string" },
@@ -55,6 +55,21 @@
           }
         },
         "priority": { "type": "string" },
+        "acceptance": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Explicit success criteria the executor should verify before reporting succeeded. (v1.4.0)"
+        },
+        "audience": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Which executor pool / feed lane should pick this up, e.g. mesh | capture-analyzer | steve. Open string. (v1.4.0)"
+        },
+        "assignee": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Person/agent identity accountable for the result (attribution, not routing). (v1.4.0)"
+        },
         "source_event_ref": { "type": "string" },
         "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] }
       }

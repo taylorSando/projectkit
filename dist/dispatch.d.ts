@@ -1,5 +1,5 @@
 /**
- * projectkit — the DISPATCH-DIRECTION surface (v1.3.0).
+ * projectkit — the DISPATCH-DIRECTION surface (v1.3.0, extended in v1.4.0).
  *
  * Every surface before this one is EMIT-direction: a testbed says "this
  * happened" (`ProjectEvent`), "do this" (`WorkRequest`), or "log this"
@@ -80,6 +80,24 @@ export interface Concern {
     /** Where/how the result should come back. */
     callback?: ConcernCallback;
     priority?: ConcernPriority;
+    /**
+     * Explicit success criteria the executor should verify before reporting
+     * `succeeded`. Mirrors `WorkRequest.acceptance` — before v1.4.0 a dispatched
+     * Concern could not carry the criteria, so an executor had to guess. (v1.4.0)
+     */
+    acceptance?: string[];
+    /**
+     * Which executor pool / feed lane should pick this up — e.g. `mesh`,
+     * `capture-analyzer`, `steve`. Open string; an adapter or pull-feed filters
+     * on it. Before v1.4.0 routing could only be inferred from kind/priority,
+     * so a Concern could not be addressed TO a specific executor. (v1.4.0)
+     */
+    audience?: string;
+    /**
+     * Person/agent identity accountable for the result (attribution), distinct
+     * from `audience` (routing). Open string, e.g. `steve`, `operator`. (v1.4.0)
+     */
+    assignee?: string;
     /** Pointer back to an originating ProjectEvent/WorkRequest/capture. */
     source_event_ref?: string;
     sensitivity?: Sensitivity;
@@ -131,7 +149,27 @@ export interface CallbackArtifact {
     kind: string;
     /** Pointer to it — a URL, path, ref, or id. Opaque to the contract. */
     ref: string;
+    /** MIME type of the artifact, e.g. "video/webm", "image/png". (v1.4.0) */
+    content_type?: string;
+    /** Size of the artifact in bytes. Matches capture-overlay's chunk-manifest
+     * `byte_size` naming. (v1.4.0) */
+    byte_size?: number;
+    /** Duration for time-based media (audio/video/replay), in ms. (v1.4.0) */
+    duration_ms?: number;
 }
+/**
+ * Machine-readable failure category on a `Callback`. Before v1.4.0 `error` was
+ * the only failure signal — a free-form string a consumer could not branch on.
+ * Open string with well-known literals so an executor can add a category
+ * without a contract bump:
+ *
+ * - `timeout`    — the executor killed the work after its time budget.
+ * - `permission` — the executor could not access a required resource.
+ * - `validation` — the Concern's inputs were malformed/unusable.
+ * - `execution`  — the work ran and failed on its own terms.
+ * - `cancelled`  — the work was cancelled before completing.
+ */
+export type CallbackErrorCode = 'timeout' | 'permission' | 'validation' | 'execution' | 'cancelled' | string;
 /**
  * `Callback` — the RESULT of executing a dispatched `Concern`, returned by the
  * adapter (webhook POST) or fetched by the testbed (poll). Keyed by
@@ -151,6 +189,8 @@ export interface Callback {
     artifacts?: CallbackArtifact[];
     /** Human-readable failure detail when status is `failed`/`cancelled`. */
     error?: string;
+    /** Machine-readable failure category when status is `failed`/`cancelled`. (v1.4.0) */
+    error_code?: CallbackErrorCode;
     /** ISO-8601 when execution finished (terminal states). */
     completed_at?: string;
 }

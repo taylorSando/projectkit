@@ -1,6 +1,6 @@
 {
   "name": "@operator/projectkit",
-  "version": "0.8.0",
+  "version": "0.9.0",
   "description": "Standalone project-signal interface: the project-facing capture/event contract, a sink-agnostic emitter SDK, and the context-handoff protocol. Turns any repo into a testbed that emits work for an agent fleet. Imports NOTHING from control-plane or mesh — mesh is just one optional sink.",
   "type": "module",
   "main": "dist/index.js",

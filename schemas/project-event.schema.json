@@ -1,13 +1,13 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "$id": "https://operator.dev/schemas/project-event-1.3.0.json",
+  "$id": "https://operator.dev/schemas/project-event-1.4.0.json",
   "title": "ProjectEventEnvelope",
   "description": "projectkit contract v1.3.0 — the project-facing event envelope a testbed emits and a subscriber (e.g. mesh) validates. Cross-language mirror of src/contract.ts. A subscriber tolerates 1.0.0, 1.1.0, 1.2.0, and 1.3.0 across a rollout (expand/backfill/contract).",
   "type": "object",
   "required": ["contract_version", "project_key", "emitted_at", "producer", "events"],
   "additionalProperties": false,
   "properties": {
-    "contract_version": { "type": "string", "enum": ["1.0.0", "1.1.0", "1.2.0", "1.3.0"] },
+    "contract_version": { "type": "string", "enum": ["1.0.0", "1.1.0", "1.2.0", "1.3.0", "1.4.0"] },
     "project_key": { "type": "string", "minLength": 1 },
     "emitted_at": { "type": "string", "format": "date-time" },
     "delivery_id": { "type": "string" },

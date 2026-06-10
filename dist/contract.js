@@ -13,7 +13,7 @@
  * subscriber (mesh) validates against the same shape.
  */
 /** Semver of this contract. Subscribers pin a `^` range; producers stamp it on every event. */
-export const CONTRACT_VERSION = '1.3.0';
+export const CONTRACT_VERSION = '1.4.0';
 /**
  * Validate a ProjectEvent against the contract. Returns a list of problems;
  * an empty list means valid. Pure, dependency-free — usable in a fail-closed

@@ -42,6 +42,11 @@ export function validateWorkRequest(o) {
     if (typeof r['requested_at'] === 'string' && Number.isNaN(Date.parse(r['requested_at']))) {
         problems.push('requested_at is not a parseable ISO-8601 timestamp');
     }
+    for (const k of ['audience', 'assignee']) {
+        if (r[k] !== undefined && (typeof r[k] !== 'string' || r[k].length === 0)) {
+            problems.push(`${k}, when present, must be a non-empty string`);
+        }
+    }
     if (r['acceptance'] !== undefined) {
         if (!Array.isArray(r['acceptance']) || r['acceptance'].some((a) => typeof a !== 'string')) {
             problems.push('acceptance, when present, must be an array of strings');

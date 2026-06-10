@@ -1,5 +1,5 @@
 /**
- * projectkit — the DISPATCH-DIRECTION surface (v1.3.0).
+ * projectkit — the DISPATCH-DIRECTION surface (v1.3.0, extended in v1.4.0).
  *
  * Every surface before this one is EMIT-direction: a testbed says "this
  * happened" (`ProjectEvent`), "do this" (`WorkRequest`), or "log this"
@@ -62,6 +62,16 @@ export function validateConcern(o) {
     if (c['inputs'] !== undefined && (typeof c['inputs'] !== 'object' || c['inputs'] === null)) {
         problems.push('inputs, when present, must be an object');
     }
+    for (const k of ['audience', 'assignee']) {
+        if (c[k] !== undefined && (typeof c[k] !== 'string' || c[k].length === 0)) {
+            problems.push(`${k}, when present, must be a non-empty string`);
+        }
+    }
+    if (c['acceptance'] !== undefined) {
+        if (!Array.isArray(c['acceptance']) || c['acceptance'].some((a) => typeof a !== 'string')) {
+            problems.push('acceptance, when present, must be an array of strings');
+        }
+    }
     if (c['callback'] !== undefined) {
         if (typeof c['callback'] !== 'object' || c['callback'] === null) {
             problems.push('callback, when present, must be an object');
@@ -102,6 +112,9 @@ export function validateCallback(o) {
     if (cb['outputs'] !== undefined && (typeof cb['outputs'] !== 'object' || cb['outputs'] === null)) {
         problems.push('outputs, when present, must be an object');
     }
+    if (cb['error_code'] !== undefined && (typeof cb['error_code'] !== 'string' || cb['error_code'].length === 0)) {
+        problems.push('error_code, when present, must be a non-empty string');
+    }
     if (cb['artifacts'] !== undefined) {
         const a = cb['artifacts'];
         if (!Array.isArray(a) ||
@@ -110,6 +123,18 @@ export function validateCallback(o) {
                 typeof x['kind'] !== 'string' ||
                 typeof x['ref'] !== 'string')) {
             problems.push('artifacts, when present, must be an array of {kind, ref} objects');
+        }
+        else {
+            for (const x of a) {
+                if (x['content_type'] !== undefined && typeof x['content_type'] !== 'string') {
+                    problems.push('artifacts[].content_type, when present, must be a string');
+                }
+                for (const k of ['byte_size', 'duration_ms']) {
+                    if (x[k] !== undefined && (typeof x[k] !== 'number' || !Number.isFinite(x[k]) || x[k] < 0)) {
+                        problems.push(`artifacts[].${k}, when present, must be a non-negative number`);
+                    }
+                }
+            }
         }
     }
     return problems;

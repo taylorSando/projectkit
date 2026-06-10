@@ -13,7 +13,7 @@
  * subscriber (mesh) validates against the same shape.
  */
 /** Semver of this contract. Subscribers pin a `^` range; producers stamp it on every event. */
-export declare const CONTRACT_VERSION: "1.3.0";
+export declare const CONTRACT_VERSION: "1.4.0";
 /**
  * A project key is an OPEN string — a project self-identifies. This is the
  * whole point of the decoupling: there is no central, closed roster of

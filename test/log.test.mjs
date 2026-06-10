@@ -139,9 +139,9 @@ test('the new log surface keeps the schema mirror in sync (log-record.schema.jso
     readFileSync(new URL('../schemas/log-record.schema.json', import.meta.url), 'utf8'),
   );
   assert.equal(schema.title, 'LogEnvelope');
-  assert.equal(schema.$id, 'https://operator.dev/schemas/log-record-1.2.0.json');
+  assert.equal(schema.$id, 'https://operator.dev/schemas/log-record-1.4.0.json');
   assert.ok(schema.$defs.LogRecord.required.includes('level'));
   assert.ok(schema.$defs.LogRecord.required.includes('message'));
   assert.deepEqual(schema.$defs.LogRecord.properties.level.enum, ['debug', 'info', 'warn', 'error', 'fatal']);
-  assert.deepEqual(schema.properties.contract_version.enum, ['1.2.0']);
+  assert.deepEqual(schema.properties.contract_version.enum, ['1.2.0', '1.3.0', '1.4.0']);
 });

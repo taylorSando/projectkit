@@ -67,6 +67,32 @@ test('validateConcern rejects non-object, bad timestamp, bad inputs, and bad cal
   );
 });
 
+test('validateConcern accepts and gates the v1.4.0 fields (audience, assignee, acceptance)', () => {
+  const base = {
+    schema_version: CONTRACT_VERSION,
+    project_key: 'sitelayer',
+    dispatched_at: fixedNow(),
+    concern_ref: 'cap-1',
+    kind: 'execute',
+    title: 'analyze capture',
+  };
+  // valid: addressed dispatch with success criteria
+  assert.deepEqual(
+    validateConcern({
+      ...base,
+      audience: 'capture-analyzer',
+      assignee: 'steve',
+      acceptance: ['transcript present', 'rrweb summary present'],
+    }),
+    [],
+  );
+  // invalid shapes fail closed
+  assert.ok(validateConcern({ ...base, audience: '' }).some((p) => /audience/.test(p)));
+  assert.ok(validateConcern({ ...base, assignee: 7 }).some((p) => /assignee/.test(p)));
+  assert.ok(validateConcern({ ...base, acceptance: 'not-an-array' }).some((p) => /acceptance/.test(p)));
+  assert.ok(validateConcern({ ...base, acceptance: ['ok', 5] }).some((p) => /acceptance/.test(p)));
+});
+
 // --- validateCallback ----------------------------------------------------
 
 test('validateCallback passes a complete callback', () => {
@@ -99,6 +125,55 @@ test('validateCallback flags missing fields, bad status, and bad artifacts', () 
       status: 'succeeded',
       artifacts: [{ kind: 'pr' }],
     }).some((p) => /artifacts/.test(p)),
+  );
+});
+
+test('validateCallback accepts and gates the v1.4.0 fields (error_code, artifact metadata)', () => {
+  const base = { schema_version: CONTRACT_VERSION, concern_ref: 'cap-1' };
+  // valid: categorized failure + media-described artifact
+  assert.deepEqual(
+    validateCallback({
+      ...base,
+      status: 'failed',
+      error: 'killed after 120000ms',
+      error_code: 'timeout',
+    }),
+    [],
+  );
+  assert.deepEqual(
+    validateCallback({
+      ...base,
+      status: 'succeeded',
+      artifacts: [
+        { kind: 'video', ref: 'https://x/y.webm', content_type: 'video/webm', byte_size: 1048576, duration_ms: 30000 },
+      ],
+    }),
+    [],
+  );
+  // invalid shapes fail closed
+  assert.ok(
+    validateCallback({ ...base, status: 'failed', error_code: '' }).some((p) => /error_code/.test(p)),
+  );
+  assert.ok(
+    validateCallback({
+      ...base,
+      status: 'succeeded',
+      artifacts: [{ kind: 'video', ref: 'r', byte_size: -1 }],
+    }).some((p) => /byte_size/.test(p)),
+  );
+  assert.ok(
+    validateCallback({
+      ...base,
+      status: 'succeeded',
+      artifacts: [{ kind: 'video', ref: 'r', content_type: 9 }],
+    }).some((p) => /content_type/.test(p)),
+  );
+  assert.ok(
+    validateCallback({
+      ...base,
+      status: 'succeeded',
+      artifacts: [{ kind: 'video', ref: 'r', duration_ms: Number.NaN }],
+    }).some((p) => /duration_ms/.test(p)),
   );
 });
 
@@ -264,19 +339,33 @@ test('the dispatch surface keeps its schema mirrors in sync (concern + callback)
     readFileSync(new URL('../schemas/concern.schema.json', import.meta.url), 'utf8'),
   );
   assert.equal(concernSchema.title, 'DispatchEnvelope');
-  assert.equal(concernSchema.$id, 'https://operator.dev/schemas/concern-1.3.0.json');
+  assert.equal(concernSchema.$id, 'https://operator.dev/schemas/concern-1.4.0.json');
   assert.ok(concernSchema.properties.contract_version.enum.includes('1.3.0'));
+  assert.ok(concernSchema.properties.contract_version.enum.includes('1.4.0'));
   for (const req of ['schema_version', 'project_key', 'dispatched_at', 'concern_ref', 'kind', 'title']) {
     assert.ok(concernSchema.$defs.Concern.required.includes(req), `concern schema missing required: ${req}`);
+  }
+  // v1.4.0 additive fields are present and OPTIONAL (never required — wire stability).
+  for (const opt of ['audience', 'assignee', 'acceptance']) {
+    assert.ok(opt in concernSchema.$defs.Concern.properties, `concern schema missing v1.4.0 field: ${opt}`);
+    assert.ok(!concernSchema.$defs.Concern.required.includes(opt), `v1.4.0 field must stay optional: ${opt}`);
   }
 
   const callbackSchema = JSON.parse(
     readFileSync(new URL('../schemas/callback.schema.json', import.meta.url), 'utf8'),
   );
   assert.equal(callbackSchema.title, 'Callback');
-  assert.equal(callbackSchema.$id, 'https://operator.dev/schemas/callback-1.3.0.json');
+  assert.equal(callbackSchema.$id, 'https://operator.dev/schemas/callback-1.4.0.json');
   for (const req of ['schema_version', 'concern_ref', 'status']) {
     assert.ok(callbackSchema.required.includes(req), `callback schema missing required: ${req}`);
+  }
+  // v1.4.0 additive fields are present and OPTIONAL.
+  assert.ok('error_code' in callbackSchema.properties, 'callback schema missing v1.4.0 field: error_code');
+  assert.ok(!callbackSchema.required.includes('error_code'), 'error_code must stay optional');
+  const artifactProps = callbackSchema.properties.artifacts.items.properties;
+  for (const opt of ['content_type', 'byte_size', 'duration_ms']) {
+    assert.ok(opt in artifactProps, `callback artifact schema missing v1.4.0 field: ${opt}`);
+    assert.ok(!callbackSchema.properties.artifacts.items.required.includes(opt), `artifact ${opt} must stay optional`);
   }
   assert.deepEqual(callbackSchema.properties.status.enum, [
     'accepted',

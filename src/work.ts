@@ -74,6 +74,13 @@ export interface WorkRequest {
   acceptance?: string[];
 
   // --- routing / attribution --------------------------------------------
+  /**
+   * Which subscriber pool / feed lane should pick this up — e.g. `mesh`,
+   * `capture-analyzer`, `steve`. Open string; mirrors `Concern.audience`. (v1.4.0)
+   */
+  audience?: string;
+  /** Person/agent identity accountable for the work, e.g. `steve`. (v1.4.0) */
+  assignee?: string;
   route_path?: string;
   entity_kind?: string;
   entity_id?: string | number | null;
@@ -131,6 +138,11 @@ export function validateWorkRequest(o: unknown): string[] {
   reqString('title');
   if (typeof r['requested_at'] === 'string' && Number.isNaN(Date.parse(r['requested_at'] as string))) {
     problems.push('requested_at is not a parseable ISO-8601 timestamp');
+  }
+  for (const k of ['audience', 'assignee'] as const) {
+    if (r[k] !== undefined && (typeof r[k] !== 'string' || (r[k] as string).length === 0)) {
+      problems.push(`${k}, when present, must be a non-empty string`);
+    }
   }
   if (r['acceptance'] !== undefined) {
     if (!Array.isArray(r['acceptance']) || (r['acceptance'] as unknown[]).some((a) => typeof a !== 'string')) {

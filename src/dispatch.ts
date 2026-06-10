@@ -1,5 +1,5 @@
 /**
- * projectkit — the DISPATCH-DIRECTION surface (v1.3.0).
+ * projectkit — the DISPATCH-DIRECTION surface (v1.3.0, extended in v1.4.0).
  *
  * Every surface before this one is EMIT-direction: a testbed says "this
  * happened" (`ProjectEvent`), "do this" (`WorkRequest`), or "log this"
@@ -87,8 +87,26 @@ export interface Concern {
   /** Where/how the result should come back. */
   callback?: ConcernCallback;
   priority?: ConcernPriority;
+  /**
+   * Explicit success criteria the executor should verify before reporting
+   * `succeeded`. Mirrors `WorkRequest.acceptance` — before v1.4.0 a dispatched
+   * Concern could not carry the criteria, so an executor had to guess. (v1.4.0)
+   */
+  acceptance?: string[];
 
   // --- routing / attribution --------------------------------------------
+  /**
+   * Which executor pool / feed lane should pick this up — e.g. `mesh`,
+   * `capture-analyzer`, `steve`. Open string; an adapter or pull-feed filters
+   * on it. Before v1.4.0 routing could only be inferred from kind/priority,
+   * so a Concern could not be addressed TO a specific executor. (v1.4.0)
+   */
+  audience?: string;
+  /**
+   * Person/agent identity accountable for the result (attribution), distinct
+   * from `audience` (routing). Open string, e.g. `steve`, `operator`. (v1.4.0)
+   */
+  assignee?: string;
   /** Pointer back to an originating ProjectEvent/WorkRequest/capture. */
   source_event_ref?: string;
 
@@ -143,7 +161,28 @@ export interface CallbackArtifact {
   kind: string;
   /** Pointer to it — a URL, path, ref, or id. Opaque to the contract. */
   ref: string;
+  /** MIME type of the artifact, e.g. "video/webm", "image/png". (v1.4.0) */
+  content_type?: string;
+  /** Size of the artifact in bytes. Matches capture-overlay's chunk-manifest
+   * `byte_size` naming. (v1.4.0) */
+  byte_size?: number;
+  /** Duration for time-based media (audio/video/replay), in ms. (v1.4.0) */
+  duration_ms?: number;
 }
+
+/**
+ * Machine-readable failure category on a `Callback`. Before v1.4.0 `error` was
+ * the only failure signal — a free-form string a consumer could not branch on.
+ * Open string with well-known literals so an executor can add a category
+ * without a contract bump:
+ *
+ * - `timeout`    — the executor killed the work after its time budget.
+ * - `permission` — the executor could not access a required resource.
+ * - `validation` — the Concern's inputs were malformed/unusable.
+ * - `execution`  — the work ran and failed on its own terms.
+ * - `cancelled`  — the work was cancelled before completing.
+ */
+export type CallbackErrorCode = 'timeout' | 'permission' | 'validation' | 'execution' | 'cancelled' | string;
 
 /**
  * `Callback` — the RESULT of executing a dispatched `Concern`, returned by the
@@ -166,6 +205,8 @@ export interface Callback {
   artifacts?: CallbackArtifact[];
   /** Human-readable failure detail when status is `failed`/`cancelled`. */
   error?: string;
+  /** Machine-readable failure category when status is `failed`/`cancelled`. (v1.4.0) */
+  error_code?: CallbackErrorCode;
   /** ISO-8601 when execution finished (terminal states). */
   completed_at?: string;
 }
@@ -216,6 +257,16 @@ export function validateConcern(o: unknown): string[] {
   if (c['inputs'] !== undefined && (typeof c['inputs'] !== 'object' || c['inputs'] === null)) {
     problems.push('inputs, when present, must be an object');
   }
+  for (const k of ['audience', 'assignee'] as const) {
+    if (c[k] !== undefined && (typeof c[k] !== 'string' || (c[k] as string).length === 0)) {
+      problems.push(`${k}, when present, must be a non-empty string`);
+    }
+  }
+  if (c['acceptance'] !== undefined) {
+    if (!Array.isArray(c['acceptance']) || (c['acceptance'] as unknown[]).some((a) => typeof a !== 'string')) {
+      problems.push('acceptance, when present, must be an array of strings');
+    }
+  }
   if (c['callback'] !== undefined) {
     if (typeof c['callback'] !== 'object' || c['callback'] === null) {
       problems.push('callback, when present, must be an object');
@@ -255,6 +306,9 @@ export function validateCallback(o: unknown): string[] {
   if (cb['outputs'] !== undefined && (typeof cb['outputs'] !== 'object' || cb['outputs'] === null)) {
     problems.push('outputs, when present, must be an object');
   }
+  if (cb['error_code'] !== undefined && (typeof cb['error_code'] !== 'string' || (cb['error_code'] as string).length === 0)) {
+    problems.push('error_code, when present, must be a non-empty string');
+  }
   if (cb['artifacts'] !== undefined) {
     const a = cb['artifacts'];
     if (
@@ -268,6 +322,17 @@ export function validateCallback(o: unknown): string[] {
       )
     ) {
       problems.push('artifacts, when present, must be an array of {kind, ref} objects');
+    } else {
+      for (const x of a as Record<string, unknown>[]) {
+        if (x['content_type'] !== undefined && typeof x['content_type'] !== 'string') {
+          problems.push('artifacts[].content_type, when present, must be a string');
+        }
+        for (const k of ['byte_size', 'duration_ms'] as const) {
+          if (x[k] !== undefined && (typeof x[k] !== 'number' || !Number.isFinite(x[k] as number) || (x[k] as number) < 0)) {
+            problems.push(`artifacts[].${k}, when present, must be a non-negative number`);
+          }
+        }
+      }
     }
   }
   return problems;

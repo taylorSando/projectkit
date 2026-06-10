@@ -20,6 +20,8 @@ test('validateWorkRequest passes a complete request', () => {
     intent: 'fix',
     title: 'Takeoff scale overlay resets on reload',
     acceptance: ['scale persists across reload'],
+    audience: 'steve',
+    assignee: 'steve',
     links: ['https://sitelayer/x'],
   };
   assert.deepEqual(validateWorkRequest(req), []);
@@ -52,6 +54,13 @@ test('validateWorkRequest rejects non-object, bad timestamp, and bad array field
   );
   assert.ok(
     validateWorkRequest({ ...base, requested_at: fixedNow(), links: 'nope' }).some((p) => /links/.test(p)),
+  );
+  // v1.4.0 fields fail closed on bad shapes
+  assert.ok(
+    validateWorkRequest({ ...base, requested_at: fixedNow(), audience: '' }).some((p) => /audience/.test(p)),
+  );
+  assert.ok(
+    validateWorkRequest({ ...base, requested_at: fixedNow(), assignee: 7 }).some((p) => /assignee/.test(p)),
   );
 });
 
