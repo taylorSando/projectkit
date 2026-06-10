@@ -64,16 +64,14 @@
  *       PORT=8790 LOCAL_EXECUTOR_CMD='...' local-executor
  */
 import http from 'node:http';
-import { spawn } from 'node:child_process';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
 import { validateConcern, validateCallback } from '../dist/dispatch.js';
+import { runConcernProcess, DEFAULT_TIMEOUT_MS } from './executor-core.mjs';
 
 const ADAPTER_NAME_DEFAULT = 'local-executor';
 const MAX_BODY_BYTES = 256 * 1024; // mirror mesh's maxProjectkitDispatchBytes
-const MAX_CAPTURE_BYTES = 64 * 1024; // stdout/stderr capture cap per stream
 const POLL_REF_PREFIX = 'pkc_';
-const DEFAULT_TIMEOUT_MS = 120_000;
 const DEFAULT_HMAC_SKEW_S = 300;
 // Tolerated contract versions — the same subscriber posture as mesh's door
 // (a producer pins its version; the executor tolerates the supported range).
@@ -158,22 +156,6 @@ function json(res, code, obj) {
   res.end(body);
 }
 
-/** Truncate captured output to the cap, marking the cut. */
-function capped(s) {
-  if (s.length <= MAX_CAPTURE_BYTES) return s;
-  return s.slice(0, MAX_CAPTURE_BYTES) + '…[truncated]';
-}
-
-/** Parse `::artifact::<kind>::<ref>` lines out of stdout into CallbackArtifacts. */
-function parseArtifacts(stdout) {
-  const artifacts = [];
-  for (const line of stdout.split('\n')) {
-    const m = /^::artifact::([^:][^:]*)::(.+)$/.exec(line.trim());
-    if (m) artifacts.push({ kind: m[1], ref: m[2] });
-  }
-  return artifacts;
-}
-
 /**
  * Create the executor. Options (all optional; env is the fallback):
  *   cmd        shell command per Concern   (LOCAL_EXECUTOR_CMD)
@@ -234,82 +216,20 @@ export function createLocalExecutor(opts = {}) {
     }
   }
 
-  /** REALLY run the Concern: one local one-shot process, async completion. */
+  /** REALLY run the Concern: one local one-shot process, async completion.
+   * The process leg lives in executor-core.mjs, SHARED with pull-executor so
+   * the two backends cannot drift on the execution contract. */
   function execute(record) {
     const concern = record.concern;
     record.spawnCount += 1;
-    const child = spawn(cmd, {
-      shell: true,
-      env: {
-        ...env,
-        CONCERN_REF: concern.concern_ref,
-        CONCERN_KIND: concern.kind,
-        CONCERN_TITLE: concern.title,
-        CONCERN_SUMMARY: concern.summary ?? '',
-        CONCERN_PROJECT_KEY: concern.project_key,
-        CONCERN_INPUTS_JSON: JSON.stringify(concern.inputs ?? {}),
-      },
-      stdio: ['pipe', 'pipe', 'pipe'],
-    });
     setCallback(record, { status: 'running' });
     log(`running concern ${concern.concern_ref}: ${cmd}`);
-
-    let stdout = '';
-    let stderr = '';
-    child.stdout.on('data', (c) => { if (stdout.length < MAX_CAPTURE_BYTES * 2) stdout += c; });
-    child.stderr.on('data', (c) => { if (stderr.length < MAX_CAPTURE_BYTES * 2) stderr += c; });
-
-    let timedOut = false;
-    const killer = setTimeout(() => {
-      timedOut = true;
-      child.kill('SIGKILL');
-    }, timeoutMs);
-
-    child.on('error', (err) => {
-      clearTimeout(killer);
-      setCallback(record, {
-        status: 'failed',
-        error: `spawn failed: ${err.message}`,
-        completed_at: new Date().toISOString(),
-      });
+    void runConcernProcess(concern, { cmd, env, timeoutMs }).then((patch) => {
+      setCallback(record, patch);
+      log(`concern ${concern.concern_ref} -> ${record.callback.status} (exit ${patch.outputs?.exit_code ?? 'n/a'})`);
       onExecuted(record);
       void pushWebhook(record);
     });
-
-    child.on('close', (code) => {
-      clearTimeout(killer);
-      if (record.callback.status === 'failed') return; // 'error' already finalized
-      const completed_at = new Date().toISOString();
-      if (timedOut) {
-        setCallback(record, {
-          status: 'failed',
-          error: `execution timed out after ${timeoutMs}ms`,
-          completed_at,
-        });
-      } else if (code === 0) {
-        const artifacts = parseArtifacts(stdout);
-        setCallback(record, {
-          status: 'succeeded',
-          outputs: { stdout: capped(stdout), exit_code: 0, command: cmd },
-          ...(artifacts.length ? { artifacts } : {}),
-          completed_at,
-        });
-      } else {
-        setCallback(record, {
-          status: 'failed',
-          outputs: { stdout: capped(stdout), exit_code: code ?? -1, command: cmd },
-          error: `command exited ${code}${stderr ? `: ${capped(stderr).slice(0, 2000)}` : ''}`,
-          completed_at,
-        });
-      }
-      log(`concern ${concern.concern_ref} -> ${record.callback.status} (exit ${code})`);
-      onExecuted(record);
-      void pushWebhook(record);
-    });
-
-    // Deliver the full Concern on stdin (ignore EPIPE from commands that don't read it).
-    child.stdin.on('error', () => {});
-    child.stdin.end(JSON.stringify(concern));
   }
 
   /** Accept one validated Concern: dedupe, mint the record, start execution. */
