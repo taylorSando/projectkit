@@ -242,3 +242,29 @@ test('bearer token and audience query reach the feed', async () => {
     await feed.close();
   }
 });
+
+test('CLI enters main when invoked through a symlinked binstub (npx layout)', async () => {
+  const { mkdtempSync, symlinkSync, rmSync } = await import('node:fs');
+  const { tmpdir } = await import('node:os');
+  const { join, resolve } = await import('node:path');
+  const { execFileSync } = await import('node:child_process');
+  const dir = mkdtempSync(join(tmpdir(), 'pk-binstub-'));
+  const link = join(dir, 'pull-executor');
+  symlinkSync(resolve('bin/pull-executor.mjs'), link);
+  try {
+    // Through a symlink, broken isMain detection loads the module as a library
+    // and exits 0 silently. Real main with no PULL_FEED_URL must exit nonzero.
+    let code = 0;
+    let stderr = '';
+    try {
+      execFileSync(process.execPath, [link], { env: { PATH: process.env.PATH }, stdio: 'pipe' });
+    } catch (err) {
+      code = err.status ?? 1;
+      stderr = String(err.stderr ?? '');
+    }
+    assert.notEqual(code, 0, 'symlinked CLI must enter main and fail loudly without env');
+    assert.match(stderr, /PULL_FEED_URL is required/);
+  } finally {
+    rmSync(dir, { recursive: true, force: true });
+  }
+});

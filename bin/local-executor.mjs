@@ -65,6 +65,7 @@
  */
 import http from 'node:http';
 import { createHash, createHmac, timingSafeEqual } from 'node:crypto';
+import { realpathSync } from 'node:fs';
 import { pathToFileURL } from 'node:url';
 import { validateConcern, validateCallback } from '../dist/dispatch.js';
 import { runConcernProcess, DEFAULT_TIMEOUT_MS } from './executor-core.mjs';
@@ -363,7 +364,14 @@ export function createLocalExecutor(opts = {}) {
 }
 
 // CLI entrypoint: `local-executor` / `node bin/local-executor.mjs`.
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+// npm/npx binstubs are SYMLINKS to this file; argv[1] is the symlink path while
+// import.meta.url is the realpath, so compare against the resolved target too.
+const isMain = process.argv[1] && (() => {
+  const direct = pathToFileURL(process.argv[1]).href;
+  let resolved = direct;
+  try { resolved = pathToFileURL(realpathSync(process.argv[1])).href; } catch { /* keep direct */ }
+  return import.meta.url === direct || import.meta.url === resolved;
+})();
 if (isMain) {
   const executor = createLocalExecutor();
   executor.listen().then((addr) => {

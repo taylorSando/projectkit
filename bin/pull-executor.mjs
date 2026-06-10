@@ -53,7 +53,7 @@
  * Zero runtime deps: node built-ins + this package's own dist (run
  * `npm run build` first). Imports NOTHING from mesh or control-plane.
  */
-import { readFileSync, writeFileSync, mkdirSync } from 'node:fs';
+import { readFileSync, writeFileSync, mkdirSync, realpathSync } from 'node:fs';
 import { dirname } from 'node:path';
 import { createHash, createHmac } from 'node:crypto';
 import { pathToFileURL } from 'node:url';
@@ -272,7 +272,14 @@ export function createPullExecutor(opts = {}) {
 }
 
 // CLI entrypoint: `pull-executor` / `node bin/pull-executor.mjs [--once]`.
-const isMain = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+// npm/npx binstubs are SYMLINKS to this file; argv[1] is the symlink path while
+// import.meta.url is the realpath, so compare against the resolved target too.
+const isMain = process.argv[1] && (() => {
+  const direct = pathToFileURL(process.argv[1]).href;
+  let resolved = direct;
+  try { resolved = pathToFileURL(realpathSync(process.argv[1])).href; } catch { /* keep direct */ }
+  return import.meta.url === direct || import.meta.url === resolved;
+})();
 if (isMain) {
   const executor = createPullExecutor();
   if (process.argv.includes('--once')) {
