@@ -27,7 +27,7 @@ This package is **not published to a registry** — it's consumed as a **git-tag
 ```jsonc
 // package.json
 "dependencies": {
-  "@operator/projectkit": "github:taylorSando/projectkit#v0.7.1"
+  "@operator/projectkit": "github:taylorSando/projectkit#v0.9.2"
 }
 ```
 
@@ -36,11 +36,13 @@ npm install   # the `prepare` script builds dist/ on install (git deps run prepa
 ```
 
 Use **`#v0.5.1` or later** for git-dep consumption — earlier tags lack the `prepare`
-hook, so `dist/` wouldn't build on install (`dist/` is gitignored). All 5 testbeds
-(chess/nhl/learn/winwar/sandolab) currently pin **`#v0.7.1`** (carries `CONTRACT_VERSION
-1.3.0` + the browser `fetchImpl` bind fix); the latest tag is **`v0.8.0`** (adds
-`bin/local-executor.mjs`, no wire change). Subscribers narrow on `contract_version`, so a
-consumer on an older tag keeps working — mesh already ingests `1.0.0` through `1.3.0`.
+hook, so `dist/` wouldn't build on install. All 6 testbeds
+(chess/nhl/learn/sitelayer/winwar/sandolab) currently pin **`#v0.9.0`** (carries
+`CONTRACT_VERSION 1.4.0` — addressed dispatch via `audience`/`assignee`/`acceptance`,
+machine-readable Callback results — plus `bin/pull-executor.mjs`); the latest tag is
+**`v0.9.2`** (`v0.9.1` fixes the npx binstub entry check; `v0.9.2` rejects
+whitespace-only refs, no wire change). Subscribers narrow on `contract_version`, so a
+consumer on an older tag keeps working — mesh already ingests `1.0.0` through `1.4.0`.
 
 ## Build it (developing projectkit itself)
 

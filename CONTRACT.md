@@ -1,10 +1,10 @@
-# projectkit contract — v1.3.0
+# projectkit contract — v1.4.0
 
 > This is the published interface Agents B (testbeds) and C (flywheel) pin to.
-> Pin a git tag: `"@operator/projectkit": "github:taylorSando/projectkit#v0.7.1"`
-> (the current testbed pin; latest tag `v0.8.0`). The **wire contract is `1.3.0`**
+> Pin a git tag: `"@operator/projectkit": "github:taylorSando/projectkit#v0.9.0"`
+> (the current testbed pin; latest tag `v0.9.2`). The **wire contract is `1.4.0`**
 > (`CONTRACT_VERSION` in `src/contract.ts`) — this is the version mesh vendors
-> byte-identical mirrors of (`mesh/core/contracts/projectkit/*-1.3.0.json`).
+> byte-identical mirrors of (`mesh/core/contracts/projectkit/*-1.4.0.json`).
 > Package versions above `0.4.0` add behavior without changing the wire.
 > Breaking the wire shape requires a major bump + a migration note here.
 
@@ -166,7 +166,7 @@ Optional: `logger`, `source_surface`, `session_id`, `error_code`, `error_message
 `fields` (structured context), `sensitivity`, `redaction_status`. See `src/log.ts` for the
 full list and `schemas/log-record.schema.json` for the cross-language mirror.
 
-## Concern / Dispatch / Callback — v1.3.0
+## Concern / Dispatch / Callback — v1.3.0 (extended in v1.4.0)
 
 Every surface above is **EMIT-direction**: a testbed says *"this happened"* (`ProjectEvent`),
 *"do this"* (`WorkRequest`), or *"log this"* (`LogRecord`) and FORGETS — fire-and-forget
@@ -216,7 +216,7 @@ RESULT arrives as a `Callback` (validated with `validateCallback`), keyed by `co
 
 | field | type | notes |
 |---|---|---|
-| `schema_version` | string | equals `1.3.0` at dispatch (SDK-stamped) |
+| `schema_version` | string | equals `CONTRACT_VERSION` (`1.4.0`) at dispatch (SDK-stamped) |
 | `project_key` | string | OPEN string — no closed roster (SDK-stamped) |
 | `dispatched_at` | string | ISO-8601 (SDK-stamped) |
 | `concern_ref` | string | producer-stable idempotency key — adapter dedupes + keys the Callback back |
@@ -224,18 +224,23 @@ RESULT arrives as a `Callback` (validated with `validateCallback`), keyed by `co
 | `title` | string | short title for the unit of work |
 
 Optional: `summary`, `inputs` (object map), `callback` (`{ url?, mode? }` where `mode` is
-`webhook` \| `poll` \| open), `priority`, `source_event_ref`, `sensitivity`. See `src/dispatch.ts`
+`webhook` \| `poll` \| open), `priority`, `source_event_ref`, `sensitivity`, and (v1.4.0)
+`audience` (executor-pool addressing), `assignee` (attribution), `acceptance[]` (success
+criteria the executor verifies). See `src/dispatch.ts`
 and `schemas/concern.schema.json` (the `DispatchEnvelope` cross-language mirror).
 
 ### Callback — required fields
 
 | field | type | notes |
 |---|---|---|
-| `schema_version` | string | equals `1.3.0` at callback |
+| `schema_version` | string | equals `CONTRACT_VERSION` (`1.4.0`) at callback |
 | `concern_ref` | string | the Concern this is the result for |
 | `status` | string | `accepted` \| `running` \| `succeeded` \| `failed` \| `cancelled` (CLOSED set) |
 
-Optional: `outputs` (object map), `artifacts[]` (`{ kind, ref }`), `error`, `completed_at`. See
+Optional: `outputs` (object map), `artifacts[]` (`{ kind, ref }`, plus v1.4.0 metadata
+`content_type` / `byte_size` / `duration_ms`), `error`, `error_code` (v1.4.0:
+`timeout` \| `permission` \| `validation` \| `execution` \| `cancelled`, open string),
+`completed_at`. See
 `src/dispatch.ts` and `schemas/callback.schema.json` for the cross-language mirror.
 
 `HttpDispatchAdapter` (POSTs the `DispatchEnvelope` to a URL, HMAC injected) and
@@ -281,6 +286,38 @@ prints the paste-ready next-agent prompt derived from the structure.
   (expand/backfill/contract).
 
 ### Migration log
+- package `0.9.2` (2026-06-12, wire unchanged at `1.4.0`) — validation TIGHTENING, no shape
+  change: whitespace-only strings are rejected where emptiness was already rejected. Schemas:
+  `concern_ref` / `request_ref` / `source_event_ref` gain `"pattern": "\\S"` on top of
+  `minLength: 1` (`concern.schema.json`, `callback.schema.json`, `work-request.schema.json`).
+  Validators (`validateConcern`, `validateCallback`, `validateWorkRequest`): required- and
+  optional-string checks `trim()` before the emptiness test; `source_event_ref` gains an
+  explicit when-present non-blank check. Inputs that previously slipped through (e.g.
+  `concern_ref: "   "`) were always invalid in intent — idempotency/provenance keys must
+  carry content — so this narrows acceptance without changing any shipped field. Also: this
+  release brings CONTRACT.md back in line with the wire (header said `1.3.0`/`v0.8.0` while
+  `src/contract.ts` shipped `1.4.0` at `v0.9.1`) and adds `test/contract-doc.test.mjs`, a
+  fail-closed self-test asserting the header version equals `CONTRACT_VERSION` so the doc
+  can never drift from the wire again.
+- `1.4.0` / package `0.9.0`–`0.9.1` (2026-06-09/10) — ADDITIVE wire bump: ADDRESSED dispatch +
+  machine-readable results. `Concern` gains `audience` (executor-pool routing — a Concern can
+  be addressed TO an executor, e.g. `capture-analyzer`, `steve`, instead of routing being
+  inferred from kind/priority), `assignee` (person/agent accountable for the result;
+  attribution, not routing), and `acceptance[]` (success criteria the executor verifies).
+  `WorkRequest` mirrors `audience` + `assignee`. `Callback` gains `error_code`
+  (`timeout` \| `permission` \| `validation` \| `execution` \| `cancelled`, open string) so a
+  consumer can branch on failure category; `CallbackArtifact` gains `content_type` /
+  `byte_size` / `duration_ms` so media results are introspectable without a second fetch.
+  Schemas mirrored at `1.4.0`; `contract_version` enums widened to tolerate `1.3.0`+`1.4.0`
+  across rollout (log-record enum also fixed — it had lagged at `1.2.0`). Package `0.9.0`
+  additionally ships `bin/pull-executor.mjs`, the POLL-direction executor backend (the
+  inverse transport of local-executor for executors that cannot receive inbound HTTP: poll a
+  producer-side feed for Concerns addressed to this executor's `audience`, claim via the
+  first `accepted` Callback, execute, POST the terminal Callback) and `bin/executor-core.mjs`
+  (the run-one-Concern leg SHARED by local- and pull-executor so they cannot drift). Package
+  `0.9.1` (2026-06-10, no wire change) fixes the CLI binstubs: npm/npx install bins as
+  symlinks, so the entry check compares against the realpath-resolved `argv[1]` — before
+  this both executors loaded as libraries and exited 0 silently under `npx`.
 - package `0.8.0` (2026-06-09, wire unchanged at `1.3.0`) — add `bin/local-executor.mjs`,
   a standalone zero-dep HTTP executor for the DISPATCH direction: the second REAL
   non-mesh `DispatchAdapter` backend (same two routes as mesh's door, byte-compatible
@@ -292,7 +329,8 @@ prints the paste-ready next-agent prompt derived from the structure.
   `dist/` for git-ref consumption (`github:taylorSando/projectkit#vX.Y.Z`); `0.7.1` binds
   `fetchImpl` to `globalThis` in `HttpSink` / `HttpArtifactSink` / `HttpDispatchAdapter`
   (fixes browser "Illegal invocation" that silently broke every browser-side capture
-  dock). Behavior only; no wire change. **`0.7.1` is the current testbed pin.**
+  dock). Behavior only; no wire change. `0.7.1` was the testbed pin until the testbeds
+  moved to `v0.9.0`.
 - package `0.6.0` (2026-06-06, wire unchanged at `1.3.0`) — ADDITIVE: add the ARTIFACT-SINK surface (`src/artifact-sink.ts`:
   `Artifact`, `ArtifactSink`, `ArtifactSinkResult`, `inlineArtifactRef`, plus
   `NullArtifactSink` / `MemoryArtifactSink` / `HttpArtifactSink` / `FanoutArtifactSink` and
