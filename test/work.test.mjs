@@ -64,6 +64,21 @@ test('validateWorkRequest rejects non-object, bad timestamp, and bad array field
   );
 });
 
+test('validateWorkRequest rejects blank idempotency and source refs', () => {
+  const base = {
+    schema_version: CONTRACT_VERSION,
+    project_key: 'x',
+    requested_at: fixedNow(),
+    request_ref: 'r1',
+    intent: 'fix',
+    title: 't',
+  };
+  assert.ok(validateWorkRequest({ ...base, request_ref: '   ' }).some((p) => /request_ref/.test(p)));
+  assert.ok(
+    validateWorkRequest({ ...base, source_event_ref: '   ' }).some((p) => /source_event_ref/.test(p)),
+  );
+});
+
 test('requestWork routes a typed request through the SAME EventSink as a *.work.requested event', async () => {
   const sink = new MemorySink();
   const signal = createProjectSignal({ projectKey: 'chess', sink, now: fixedNow, strict: true });

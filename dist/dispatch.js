@@ -46,7 +46,7 @@ export function validateConcern(o) {
         return ['concern is not an object'];
     const c = o;
     const reqString = (k) => {
-        if (typeof c[k] !== 'string' || c[k].length === 0) {
+        if (typeof c[k] !== 'string' || c[k].trim().length === 0) {
             problems.push(`missing/invalid required string field: ${k}`);
         }
     };
@@ -63,9 +63,13 @@ export function validateConcern(o) {
         problems.push('inputs, when present, must be an object');
     }
     for (const k of ['audience', 'assignee']) {
-        if (c[k] !== undefined && (typeof c[k] !== 'string' || c[k].length === 0)) {
+        if (c[k] !== undefined && (typeof c[k] !== 'string' || c[k].trim().length === 0)) {
             problems.push(`${k}, when present, must be a non-empty string`);
         }
+    }
+    if (c['source_event_ref'] !== undefined &&
+        (typeof c['source_event_ref'] !== 'string' || c['source_event_ref'].trim().length === 0)) {
+        problems.push('source_event_ref, when present, must be a non-empty string');
     }
     if (c['acceptance'] !== undefined) {
         if (!Array.isArray(c['acceptance']) || c['acceptance'].some((a) => typeof a !== 'string')) {
@@ -99,7 +103,7 @@ export function validateCallback(o) {
         return ['callback is not an object'];
     const cb = o;
     const reqString = (k) => {
-        if (typeof cb[k] !== 'string' || cb[k].length === 0) {
+        if (typeof cb[k] !== 'string' || cb[k].trim().length === 0) {
             problems.push(`missing/invalid required string field: ${k}`);
         }
     };
@@ -112,7 +116,7 @@ export function validateCallback(o) {
     if (cb['outputs'] !== undefined && (typeof cb['outputs'] !== 'object' || cb['outputs'] === null)) {
         problems.push('outputs, when present, must be an object');
     }
-    if (cb['error_code'] !== undefined && (typeof cb['error_code'] !== 'string' || cb['error_code'].length === 0)) {
+    if (cb['error_code'] !== undefined && (typeof cb['error_code'] !== 'string' || cb['error_code'].trim().length === 0)) {
         problems.push('error_code, when present, must be a non-empty string');
     }
     if (cb['artifacts'] !== undefined) {

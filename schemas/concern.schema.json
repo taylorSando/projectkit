@@ -34,7 +34,7 @@
         "schema_version": { "type": "string" },
         "project_key": { "type": "string", "minLength": 1 },
         "dispatched_at": { "type": "string", "format": "date-time" },
-        "concern_ref": { "type": "string", "minLength": 1 },
+        "concern_ref": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "kind": {
           "type": "string",
           "minLength": 1,
@@ -70,7 +70,7 @@
           "minLength": 1,
           "description": "Person/agent identity accountable for the result (attribution, not routing). (v1.4.0)"
         },
-        "source_event_ref": { "type": "string" },
+        "source_event_ref": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] }
       }
     }

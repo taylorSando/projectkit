@@ -126,7 +126,7 @@ export function validateWorkRequest(o: unknown): string[] {
   if (typeof o !== 'object' || o === null) return ['work request is not an object'];
   const r = o as Record<string, unknown>;
   const reqString = (k: string) => {
-    if (typeof r[k] !== 'string' || (r[k] as string).length === 0) {
+    if (typeof r[k] !== 'string' || (r[k] as string).trim().length === 0) {
       problems.push(`missing/invalid required string field: ${k}`);
     }
   };
@@ -140,9 +140,15 @@ export function validateWorkRequest(o: unknown): string[] {
     problems.push('requested_at is not a parseable ISO-8601 timestamp');
   }
   for (const k of ['audience', 'assignee'] as const) {
-    if (r[k] !== undefined && (typeof r[k] !== 'string' || (r[k] as string).length === 0)) {
+    if (r[k] !== undefined && (typeof r[k] !== 'string' || (r[k] as string).trim().length === 0)) {
       problems.push(`${k}, when present, must be a non-empty string`);
     }
+  }
+  if (
+    r['source_event_ref'] !== undefined &&
+    (typeof r['source_event_ref'] !== 'string' || (r['source_event_ref'] as string).trim().length === 0)
+  ) {
+    problems.push('source_event_ref, when present, must be a non-empty string');
   }
   if (r['acceptance'] !== undefined) {
     if (!Array.isArray(r['acceptance']) || (r['acceptance'] as unknown[]).some((a) => typeof a !== 'string')) {

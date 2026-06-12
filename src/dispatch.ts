@@ -241,7 +241,7 @@ export function validateConcern(o: unknown): string[] {
   if (typeof o !== 'object' || o === null) return ['concern is not an object'];
   const c = o as Record<string, unknown>;
   const reqString = (k: string) => {
-    if (typeof c[k] !== 'string' || (c[k] as string).length === 0) {
+    if (typeof c[k] !== 'string' || (c[k] as string).trim().length === 0) {
       problems.push(`missing/invalid required string field: ${k}`);
     }
   };
@@ -258,9 +258,15 @@ export function validateConcern(o: unknown): string[] {
     problems.push('inputs, when present, must be an object');
   }
   for (const k of ['audience', 'assignee'] as const) {
-    if (c[k] !== undefined && (typeof c[k] !== 'string' || (c[k] as string).length === 0)) {
+    if (c[k] !== undefined && (typeof c[k] !== 'string' || (c[k] as string).trim().length === 0)) {
       problems.push(`${k}, when present, must be a non-empty string`);
     }
+  }
+  if (
+    c['source_event_ref'] !== undefined &&
+    (typeof c['source_event_ref'] !== 'string' || (c['source_event_ref'] as string).trim().length === 0)
+  ) {
+    problems.push('source_event_ref, when present, must be a non-empty string');
   }
   if (c['acceptance'] !== undefined) {
     if (!Array.isArray(c['acceptance']) || (c['acceptance'] as unknown[]).some((a) => typeof a !== 'string')) {
@@ -293,7 +299,7 @@ export function validateCallback(o: unknown): string[] {
   if (typeof o !== 'object' || o === null) return ['callback is not an object'];
   const cb = o as Record<string, unknown>;
   const reqString = (k: string) => {
-    if (typeof cb[k] !== 'string' || (cb[k] as string).length === 0) {
+    if (typeof cb[k] !== 'string' || (cb[k] as string).trim().length === 0) {
       problems.push(`missing/invalid required string field: ${k}`);
     }
   };
@@ -306,7 +312,7 @@ export function validateCallback(o: unknown): string[] {
   if (cb['outputs'] !== undefined && (typeof cb['outputs'] !== 'object' || cb['outputs'] === null)) {
     problems.push('outputs, when present, must be an object');
   }
-  if (cb['error_code'] !== undefined && (typeof cb['error_code'] !== 'string' || (cb['error_code'] as string).length === 0)) {
+  if (cb['error_code'] !== undefined && (typeof cb['error_code'] !== 'string' || (cb['error_code'] as string).trim().length === 0)) {
     problems.push('error_code, when present, must be a non-empty string');
   }
   if (cb['artifacts'] !== undefined) {

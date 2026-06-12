@@ -34,7 +34,7 @@
         "schema_version": { "type": "string" },
         "project_key": { "type": "string", "minLength": 1 },
         "requested_at": { "type": "string", "format": "date-time" },
-        "request_ref": { "type": "string", "minLength": 1 },
+        "request_ref": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "intent": {
           "type": "string",
           "minLength": 1,
@@ -57,7 +57,7 @@
         "route_path": { "type": "string" },
         "entity_kind": { "type": "string" },
         "entity_id": { "type": ["string", "number", "null"] },
-        "source_event_ref": { "type": "string" },
+        "source_event_ref": { "type": "string", "minLength": 1, "pattern": "\\S" },
         "sensitivity": { "type": "string", "enum": ["public", "internal", "private"] },
         "links": { "type": "array", "items": { "type": "string" } },
         "payload": { "type": "object" }

@@ -67,6 +67,19 @@ test('validateConcern rejects non-object, bad timestamp, bad inputs, and bad cal
   );
 });
 
+test('validateConcern rejects blank idempotency and source refs', () => {
+  const base = {
+    schema_version: CONTRACT_VERSION,
+    project_key: 'x',
+    dispatched_at: fixedNow(),
+    concern_ref: 'c1',
+    kind: 'execute',
+    title: 't',
+  };
+  assert.ok(validateConcern({ ...base, concern_ref: '   ' }).some((p) => /concern_ref/.test(p)));
+  assert.ok(validateConcern({ ...base, source_event_ref: '   ' }).some((p) => /source_event_ref/.test(p)));
+});
+
 test('validateConcern accepts and gates the v1.4.0 fields (audience, assignee, acceptance)', () => {
   const base = {
     schema_version: CONTRACT_VERSION,
@@ -125,6 +138,11 @@ test('validateCallback flags missing fields, bad status, and bad artifacts', () 
       status: 'succeeded',
       artifacts: [{ kind: 'pr' }],
     }).some((p) => /artifacts/.test(p)),
+  );
+  assert.ok(
+    validateCallback({ schema_version: CONTRACT_VERSION, concern_ref: '   ', status: 'succeeded' }).some((p) =>
+      /concern_ref/.test(p),
+    ),
   );
 });
 

@@ -29,7 +29,7 @@ export function validateWorkRequest(o) {
         return ['work request is not an object'];
     const r = o;
     const reqString = (k) => {
-        if (typeof r[k] !== 'string' || r[k].length === 0) {
+        if (typeof r[k] !== 'string' || r[k].trim().length === 0) {
             problems.push(`missing/invalid required string field: ${k}`);
         }
     };
@@ -43,9 +43,13 @@ export function validateWorkRequest(o) {
         problems.push('requested_at is not a parseable ISO-8601 timestamp');
     }
     for (const k of ['audience', 'assignee']) {
-        if (r[k] !== undefined && (typeof r[k] !== 'string' || r[k].length === 0)) {
+        if (r[k] !== undefined && (typeof r[k] !== 'string' || r[k].trim().length === 0)) {
             problems.push(`${k}, when present, must be a non-empty string`);
         }
+    }
+    if (r['source_event_ref'] !== undefined &&
+        (typeof r['source_event_ref'] !== 'string' || r['source_event_ref'].trim().length === 0)) {
+        problems.push('source_event_ref, when present, must be a non-empty string');
     }
     if (r['acceptance'] !== undefined) {
         if (!Array.isArray(r['acceptance']) || r['acceptance'].some((a) => typeof a !== 'string')) {

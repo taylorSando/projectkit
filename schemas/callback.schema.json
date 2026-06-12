@@ -8,7 +8,7 @@
   "additionalProperties": true,
   "properties": {
     "schema_version": { "type": "string" },
-    "concern_ref": { "type": "string", "minLength": 1 },
+    "concern_ref": { "type": "string", "minLength": 1, "pattern": "\\S" },
     "status": {
       "type": "string",
       "enum": ["accepted", "running", "succeeded", "failed", "cancelled"]
