@@ -21,13 +21,13 @@ a sink-agnostic emitter SDK, and the context-handoff protocol — owning **nothi
 ## Depend on this (testbeds + mesh)
 
 This package is **not published to a registry** — it's consumed as a **git-tag dependency**
-(stays private + git-based, no npm/registry infra). Pin a tag in the consumer's `package.json`
-(GitHub short form, the pattern the testbeds use; the Bitbucket `git+ssh://` form works too):
+(stays private + git-based, no npm/registry infra). Pin a Bitbucket tag in the consumer's
+`package.json`:
 
 ```jsonc
 // package.json
 "dependencies": {
-  "@operator/projectkit": "github:taylorSando/projectkit#v0.9.2"
+  "@operator/projectkit": "bitbucket:taylor_sando/projectkit#v0.9.2"
 }
 ```
 
