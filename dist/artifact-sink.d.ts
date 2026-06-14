@@ -43,13 +43,21 @@ export interface Artifact {
     metadata?: Record<string, unknown>;
 }
 /**
+ * Where the sink left the artifact. `inline` is intentionally not durable: it
+ * says "the dock produced a ref" but no bytes were stored.
+ */
+export type ArtifactPersistence = 'durable' | 'inline' | 'memory' | 'missing' | 'unknown';
+/**
  * Result of persisting one {@link Artifact}. Mirrors `SinkResult` conventions in
  * {@link ./sink.js}: `ok` + `sink` always; `ref` on success (where the media now
- * lives); `status`/`error` for diagnostics.
+ * lives); `persistence` says whether that ref can be fetched later; `status` /
+ * `error` are diagnostics.
  */
 export interface ArtifactSinkResult {
     ok: boolean;
     sink: string;
+    /** Whether the artifact bytes were durably stored, kept in memory, or not stored. */
+    persistence: ArtifactPersistence;
     /** Pointer to the stored media on success — a URL, path, ref, or the inline ref. */
     ref?: string;
     status?: number;
