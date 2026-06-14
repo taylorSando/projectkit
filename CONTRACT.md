@@ -1,8 +1,8 @@
 # projectkit contract — v1.4.0
 
 > This is the published interface Agents B (testbeds) and C (flywheel) pin to.
-> Pin a git tag: `"@operator/projectkit": "bitbucket:taylor_sando/projectkit#v0.9.0"`
-> (the current testbed pin; latest tag `v0.9.2`). The **wire contract is `1.4.0`**
+> Pin a git tag: `"@operator/projectkit": "bitbucket:taylor_sando/projectkit#v0.9.3"`
+> (the current testbed pin; latest tag `v0.9.3`). The **wire contract is `1.4.0`**
 > (`CONTRACT_VERSION` in `src/contract.ts`) — this is the version mesh vendors
 > byte-identical mirrors of (`mesh/core/contracts/projectkit/*-1.4.0.json`).
 > Package versions above `0.4.0` add behavior without changing the wire.
