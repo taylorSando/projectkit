@@ -26,9 +26,9 @@
  * Run:  node server.mjs            (PORT defaults to 8799, HOST to 127.0.0.1)
  *       PORT=8799 HOST=0.0.0.0 node server.mjs
  *
- * Resolve the contract from the published git-ref so this stays a faithful,
+ * Resolve the contract from this checkout so this stays a faithful,
  * dependency-light reference adapter:
- *   npm i github:taylorSando/projectkit#v0.7.0   (see package.json here)
+ *   npm install   (package.json points @operator/projectkit at file:../..)
  */
 import http from 'node:http';
 import { validateConcern, validateCallback } from '@operator/projectkit';

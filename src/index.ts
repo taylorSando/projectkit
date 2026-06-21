@@ -48,6 +48,7 @@ export {
   type Artifact,
   type ArtifactSink,
   type ArtifactSinkResult,
+  type ArtifactPersistence,
   type HttpArtifactSinkOptions,
 } from './artifact-sink.js';
 

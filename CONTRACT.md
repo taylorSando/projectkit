@@ -1,7 +1,7 @@
 # projectkit contract — v1.4.0
 
 > This is the published interface Agents B (testbeds) and C (flywheel) pin to.
-> Pin a git tag: `"@operator/projectkit": "github:taylorSando/projectkit#v0.9.0"`
+> Pin a git tag: `"@operator/projectkit": "bitbucket:taylor_sando/projectkit#v0.9.0"`
 > (the current testbed pin; latest tag `v0.9.2`). The **wire contract is `1.4.0`**
 > (`CONTRACT_VERSION` in `src/contract.ts`) — this is the version mesh vendors
 > byte-identical mirrors of (`mesh/core/contracts/projectkit/*-1.4.0.json`).
@@ -326,7 +326,7 @@ prints the paste-ready next-agent prompt derived from the structure.
 - package `0.7.x` (2026-06-08/09, wire unchanged at `1.3.0`) — `0.7.0` work-item LIFECYCLE
   surface (`src/worklifecycle.ts`: pure, storage-agnostic state machine + `WorkItemStore`
   port lifted from sitelayer's `context_work_items`; no new transport envelope) + committed
-  `dist/` for git-ref consumption (`github:taylorSando/projectkit#vX.Y.Z`); `0.7.1` binds
+  `dist/` for git-ref consumption (`bitbucket:taylor_sando/projectkit#vX.Y.Z`); `0.7.1` binds
   `fetchImpl` to `globalThis` in `HttpSink` / `HttpArtifactSink` / `HttpDispatchAdapter`
   (fixes browser "Illegal invocation" that silently broke every browser-side capture
   dock). Behavior only; no wire change. `0.7.1` was the testbed pin until the testbeds

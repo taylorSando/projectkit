@@ -46,13 +46,22 @@ export interface Artifact {
 }
 
 /**
+ * Where the sink left the artifact. `inline` is intentionally not durable: it
+ * says "the dock produced a ref" but no bytes were stored.
+ */
+export type ArtifactPersistence = 'durable' | 'inline' | 'memory' | 'missing' | 'unknown';
+
+/**
  * Result of persisting one {@link Artifact}. Mirrors `SinkResult` conventions in
  * {@link ./sink.js}: `ok` + `sink` always; `ref` on success (where the media now
- * lives); `status`/`error` for diagnostics.
+ * lives); `persistence` says whether that ref can be fetched later; `status` /
+ * `error` are diagnostics.
  */
 export interface ArtifactSinkResult {
   ok: boolean;
   sink: string;
+  /** Whether the artifact bytes were durably stored, kept in memory, or not stored. */
+  persistence: ArtifactPersistence;
   /** Pointer to the stored media on success — a URL, path, ref, or the inline ref. */
   ref?: string;
   status?: number;
@@ -76,7 +85,7 @@ export function inlineArtifactRef(artifact: Pick<Artifact, 'kind' | 'sessionId'>
 export class NullArtifactSink implements ArtifactSink {
   readonly name = 'null-artifact';
   async put(artifact: Artifact): Promise<ArtifactSinkResult> {
-    return { ok: true, sink: this.name, ref: inlineArtifactRef(artifact) };
+    return { ok: true, sink: this.name, persistence: 'inline', ref: inlineArtifactRef(artifact) };
   }
 }
 
@@ -86,7 +95,7 @@ export class MemoryArtifactSink implements ArtifactSink {
   readonly artifacts: Artifact[] = [];
   async put(artifact: Artifact): Promise<ArtifactSinkResult> {
     this.artifacts.push(artifact);
-    return { ok: true, sink: this.name, ref: inlineArtifactRef(artifact) };
+    return { ok: true, sink: this.name, persistence: 'memory', ref: inlineArtifactRef(artifact) };
   }
   clear() {
     this.artifacts.length = 0;
@@ -146,6 +155,7 @@ export class HttpArtifactSink implements ArtifactSink {
       return {
         ok: false,
         sink: this.name,
+        persistence: 'missing',
         error: 'HttpArtifactSink: artifact has no bytes to upload (got a ref-only artifact)',
       };
     }
@@ -160,7 +170,7 @@ export class HttpArtifactSink implements ArtifactSink {
         // view of the same bytes we send (mirrors HttpSink signing the JSON body).
         Object.assign(headers, await this.opts.sign(bytesToBinaryString(artifact.bytes)));
       } catch (err) {
-        return { ok: false, sink: this.name, error: `sign failed: ${errMsg(err)}` };
+        return { ok: false, sink: this.name, persistence: 'missing', error: `sign failed: ${errMsg(err)}` };
       }
     }
 
@@ -176,16 +186,17 @@ export class HttpArtifactSink implements ArtifactSink {
         signal: controller.signal,
       });
       if (!res.ok) {
-        return { ok: false, sink: this.name, status: res.status, error: `HTTP ${res.status}` };
+        return { ok: false, sink: this.name, persistence: 'missing', status: res.status, error: `HTTP ${res.status}` };
       }
       return {
         ok: true,
         sink: this.name,
+        persistence: 'durable',
         status: res.status,
         ref: this.deriveRef(res, artifact),
       };
     } catch (err) {
-      return { ok: false, sink: this.name, error: errMsg(err) };
+      return { ok: false, sink: this.name, persistence: 'missing', error: errMsg(err) };
     } finally {
       clearTimeout(timer);
     }
@@ -211,12 +222,20 @@ export class FanoutArtifactSink implements ArtifactSink {
       return {
         ok: false,
         sink: this.name,
+        persistence: 'missing',
         error: failed.map((f) => `${f.sink}:${f.error}`).join('; '),
       };
     }
     const firstRef = results.find((r) => r.ref)?.ref ?? inlineArtifactRef(artifact);
-    return { ok: true, sink: this.name, ref: firstRef };
+    return { ok: true, sink: this.name, persistence: bestPersistence(results), ref: firstRef };
   }
+}
+
+function bestPersistence(results: ArtifactSinkResult[]): ArtifactPersistence {
+  if (results.some((r) => r.persistence === 'durable')) return 'durable';
+  if (results.some((r) => r.persistence === 'memory')) return 'memory';
+  if (results.some((r) => r.persistence === 'inline')) return 'inline';
+  return 'missing';
 }
 
 /** Copy into a fresh ArrayBuffer so the value is an unambiguous BodyInit/BufferSource. */

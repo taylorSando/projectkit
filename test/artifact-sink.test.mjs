@@ -31,6 +31,7 @@ test('NullArtifactSink persists nothing and returns the inline ref (capture-off-
   const res = await sink.put(makeArtifact({ kind: 'audio', sessionId: 'sX' }));
   assert.equal(res.ok, true);
   assert.equal(res.sink, 'null-artifact');
+  assert.equal(res.persistence, 'inline');
   assert.equal(res.ref, 'inline:audio:sX');
 });
 
@@ -39,6 +40,7 @@ test('MemoryArtifactSink collects artifacts and returns the inline ref', async (
   const a = makeArtifact({ kind: 'video', sessionId: 's1' });
   const res = await sink.put(a);
   assert.equal(res.ok, true);
+  assert.equal(res.persistence, 'memory');
   assert.equal(res.ref, 'inline:video:s1');
   assert.equal(sink.artifacts.length, 1);
   assert.equal(sink.artifacts[0], a);
@@ -59,6 +61,7 @@ test('HttpArtifactSink PUTs the raw bytes with the artifact content-type', async
   const res = await sink.put(artifact);
 
   assert.equal(res.ok, true);
+  assert.equal(res.persistence, 'durable');
   assert.equal(res.status, 201);
   // Default ref derivation reads the Location header.
   assert.equal(res.ref, 'https://blob.example/o/abc');
@@ -82,6 +85,7 @@ test('HttpArtifactSink supports POST and static headers; falls back to url ref w
   });
   const res = await sink.put(makeArtifact());
   assert.equal(res.ok, true);
+  assert.equal(res.persistence, 'durable');
   assert.equal(captured.init.method, 'POST');
   assert.equal(captured.init.headers['x-bucket'], 'dock');
   // No Location header → ref falls back to the request URL.
@@ -106,6 +110,7 @@ test('HttpArtifactSink injects HMAC headers via sign (never baked in) and signs 
   const res = await sink.put(artifact);
 
   assert.equal(res.ok, true);
+  assert.equal(res.persistence, 'durable');
   assert.equal(captured.init.headers['X-Mesh-Signature'], 'sha256=deadbeef');
   assert.equal(captured.init.headers['X-Mesh-Component'], 'dock');
   // The signer saw a deterministic binary-string view of the exact bytes.
@@ -126,6 +131,7 @@ test('HttpArtifactSink returns ok:false when the signer throws (fail closed, lik
   });
   const res = await sink.put(makeArtifact());
   assert.equal(res.ok, false);
+  assert.equal(res.persistence, 'missing');
   assert.match(res.error ?? '', /sign failed: no secret/);
   assert.equal(fetched, false, 'must not upload when signing fails');
 });
@@ -137,6 +143,7 @@ test('HttpArtifactSink maps a non-2xx response to ok:false with the status', asy
   });
   const res = await sink.put(makeArtifact());
   assert.equal(res.ok, false);
+  assert.equal(res.persistence, 'missing');
   assert.equal(res.status, 413);
   assert.match(res.error ?? '', /HTTP 413/);
 });
@@ -157,6 +164,7 @@ test('HttpArtifactSink fails closed on a ref-only artifact (no bytes to upload)'
     ref: 'inline:audio:s9',
   });
   assert.equal(res.ok, false);
+  assert.equal(res.persistence, 'missing');
   assert.match(res.error ?? '', /no bytes/);
   assert.equal(fetched, false);
 });
@@ -172,6 +180,7 @@ test('HttpArtifactSink aborts on timeout and reports a clean failure', async () 
   });
   const res = await sink.put(makeArtifact());
   assert.equal(res.ok, false);
+  assert.equal(res.persistence, 'missing');
   assert.match(res.error ?? '', /abort/i);
 });
 
@@ -193,6 +202,7 @@ test('FanoutArtifactSink ok only if ALL succeed; returns the first concrete ref'
   const fan = new FanoutArtifactSink([http, mem]);
   const res = await fan.put(makeArtifact());
   assert.equal(res.ok, true);
+  assert.equal(res.persistence, 'durable');
   assert.equal(res.ref, 'https://blob.example/o/z'); // http ref wins (first concrete)
   assert.equal(mem.artifacts.length, 1);
 });
@@ -206,6 +216,7 @@ test('FanoutArtifactSink reports ok:false when any leg fails', async () => {
   const fan = new FanoutArtifactSink([ok, bad]);
   const res = await fan.put(makeArtifact());
   assert.equal(res.ok, false);
+  assert.equal(res.persistence, 'missing');
   assert.match(res.error ?? '', /http-artifact.*HTTP 500/);
 });
 
