@@ -24,6 +24,36 @@ test('contract version is pinned', () => {
   assert.equal(CONTRACT_VERSION, '1.4.0');
 });
 
+// Every wire-envelope schema's contract_version enum must accept the current
+// CONTRACT_VERSION. This catches the seam's #1 silent break: src/contract.ts
+// bumps the constant (or a schema bumps its enum) but the other side is
+// forgotten, so a freshly-emitted envelope fails validation against a stale
+// schema enum on the consumer. Keep this list in sync with the schemas that
+// carry a contract_version enum.
+const WIRE_SCHEMAS_WITH_CONTRACT_VERSION = [
+  'project-event',
+  'work-request',
+  'concern',
+  'log-record',
+];
+
+test('every wire schema accepts the current CONTRACT_VERSION', () => {
+  for (const name of WIRE_SCHEMAS_WITH_CONTRACT_VERSION) {
+    const schema = JSON.parse(
+      readFileSync(new URL(`../schemas/${name}.schema.json`, import.meta.url), 'utf8'),
+    );
+    const enumVals = schema.properties?.contract_version?.enum;
+    assert.ok(
+      Array.isArray(enumVals),
+      `${name}.schema.json has no contract_version enum to check`,
+    );
+    assert.ok(
+      enumVals.includes(CONTRACT_VERSION),
+      `${name}.schema.json contract_version enum ${JSON.stringify(enumVals)} is missing the current CONTRACT_VERSION ${CONTRACT_VERSION} — extend the schema enum whenever the contract version bumps`,
+    );
+  }
+});
+
 test('emit materializes a valid wire event through the sink', async () => {
   const sink = new MemorySink();
   const signal = createProjectSignal({ projectKey: 'chess', sink, now: fixedNow, strict: true });
@@ -193,8 +223,13 @@ const captureSchema = JSON.parse(
 );
 
 test('capture-envelope schema is the cross-language mirror of the TS CaptureEnvelope', () => {
-  // Mirror the contract: every typed property of the CaptureEnvelope interface
-  // must be declared in the schema (drift the other way is caught by review).
+  // Mirror the contract BIDIRECTIONALLY: the schema's DECLARED property set must
+  // equal the TS CaptureEnvelope interface's property set. Forward (TS->schema)
+  // catches a new TS field that was never published; reverse (schema->TS) catches
+  // a schema-only declared field that drifted from the interface. This is the
+  // SCHEMA's declared shape — runtime producer-superset payloads remain tolerated
+  // via additionalProperties:true (asserted below), so the Python builder can
+  // still emit extra attribution fields without failing validation.
   const tsProps = [
     'schema_version', 'capture_session_id', 'url', 'page_title', 'captured_at',
     'host_id', 'project_key', 'project_hint', 'source_surface', 'screenshot_ref',
@@ -205,8 +240,16 @@ test('capture-envelope schema is the cross-language mirror of the TS CaptureEnve
   for (const p of tsProps) {
     assert.ok(captureSchema.properties[p], `schema is missing TS field: ${p}`);
   }
-  // Like the project-event ProjectEvent mirror, extras are tolerated so a
-  // producer-superset (the Python builder emits more attribution fields) validates.
+  const tsSet = new Set(tsProps);
+  for (const p of Object.keys(captureSchema.properties)) {
+    assert.ok(
+      tsSet.has(p),
+      `schema declares a property absent from the TS CaptureEnvelope interface: ${p} (add it to tsProps here, or remove it from the schema)`,
+    );
+  }
+  // Runtime extras are still tolerated so a producer-superset (the Python builder
+  // emits more attribution fields) validates — this is separate from the schema's
+  // DECLARED property set pinned above.
   assert.equal(captureSchema.additionalProperties, true);
   assert.equal(captureSchema.$id, 'https://operator.dev/schemas/capture-envelope-1.0.0.json');
 });
