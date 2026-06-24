@@ -1,7 +1,7 @@
 {
   "name": "@operator/projectkit",
-  "version": "0.9.3",
-  "description": "Standalone project-signal interface: the project-facing capture/event contract, a sink-agnostic emitter SDK, and the context-handoff protocol. Turns any repo into a testbed that emits work for an agent fleet. Imports NOTHING from control-plane or mesh \u2014 mesh is just one optional sink.",
+  "version": "0.9.5",
+  "description": "Standalone project-signal interface: the project-facing capture/event contract, a sink-agnostic emitter SDK, and the context-handoff protocol. Turns any repo into a testbed that emits work for an agent fleet. Imports NOTHING from control-plane or mesh — mesh is just one optional sink.",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
@@ -27,6 +27,10 @@
     "./worklifecycle": {
       "types": "./dist/worklifecycle.d.ts",
       "import": "./dist/worklifecycle.js"
+    },
+    "./workqueue": {
+      "types": "./dist/workqueue.d.ts",
+      "import": "./dist/workqueue.js"
     },
     "./mesh-hmac": {
       "types": "./dist/mesh-hmac.d.ts",

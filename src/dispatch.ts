@@ -152,6 +152,8 @@ export interface Ack {
   error?: string;
 }
 
+type AckBody = Partial<Ack> & Record<string, unknown>;
+
 /** Terminal + transitional states a dispatched `Concern` moves through. */
 export type CallbackStatus = 'accepted' | 'running' | 'succeeded' | 'failed' | 'cancelled';
 
@@ -452,18 +454,13 @@ export class HttpDispatchAdapter implements DispatchAdapter {
         body,
         signal: controller.signal,
       });
-      const ack: Ack = {
-        ok: res.ok,
+      return await readHttpAck(res, {
         adapter: this.name,
-        status: res.status,
-        accepted: res.ok ? envelope.concerns.length : 0,
-        ...(single ? { concern_ref: single } : {}),
-        ...(res.ok ? {} : { error: `HTTP ${res.status}` }),
-      };
-      // If the adapter returned a poll handle, surface it for poll-mode callers.
-      const pollRef = await readPollRef(res);
-      if (pollRef) ack.poll_ref = pollRef;
-      return ack;
+        httpOk: res.ok,
+        httpStatus: res.status,
+        fallbackAccepted: envelope.concerns.length,
+        concernRef: single,
+      });
     } catch (err) {
       return { ok: false, adapter: this.name, error: errMsg(err) };
     } finally {
@@ -472,16 +469,68 @@ export class HttpDispatchAdapter implements DispatchAdapter {
   }
 }
 
-/** Best-effort extraction of a poll handle from the dispatch response body. */
-async function readPollRef(res: { ok: boolean; json?: () => Promise<unknown> }): Promise<string | undefined> {
-  if (!res.ok || typeof res.json !== 'function') return undefined;
+export interface HttpAckContext {
+  adapter: string;
+  httpOk: boolean;
+  httpStatus: number;
+  fallbackAccepted: number;
+  concernRef?: string;
+}
+
+/**
+ * Parse an adapter Ack from an HTTP response without assuming that HTTP 2xx
+ * means every concern was accepted. Mesh and local-executor return the real
+ * accepted count in the body; older adapters may omit it, so OK responses keep
+ * the historical fallback.
+ */
+export async function readHttpAck(res: { ok: boolean; status: number; json?: () => Promise<unknown> }, ctx: HttpAckContext): Promise<Ack> {
+  const body = await readAckBody(res);
+  const accepted = acceptedFromBody(body, ctx.httpOk ? ctx.fallbackAccepted : 0);
+  const bodyOk = typeof body?.ok === 'boolean' ? body.ok : undefined;
+  const ok = ctx.httpOk && (bodyOk ?? true);
+  const ack: Ack = {
+    ok,
+    adapter: stringField(body, 'adapter') ?? ctx.adapter,
+    status: numberField(body, 'status') ?? ctx.httpStatus,
+    accepted,
+    ...(stringField(body, 'concern_ref') ?? ctx.concernRef
+      ? { concern_ref: stringField(body, 'concern_ref') ?? ctx.concernRef }
+      : {}),
+    ...(stringField(body, 'poll_ref') ? { poll_ref: stringField(body, 'poll_ref') } : {}),
+  };
+  const error = stringField(body, 'error');
+  if (error) ack.error = error;
+  if (!ack.ok && !ack.error) ack.error = `HTTP ${ctx.httpStatus}`;
+  return ack;
+}
+
+async function readAckBody(res: { json?: () => Promise<unknown> }): Promise<AckBody | null> {
+  if (typeof res.json !== 'function') return null;
   try {
-    const data = (await res.json()) as Record<string, unknown> | null;
-    const ref = data?.['poll_ref'];
-    return typeof ref === 'string' && ref.length > 0 ? ref : undefined;
+    const data = await res.json();
+    return typeof data === 'object' && data !== null ? (data as AckBody) : null;
   } catch {
-    return undefined;
+    return null;
   }
+}
+
+function acceptedFromBody(body: AckBody | null, fallback: number): number {
+  const accepted = body?.accepted;
+  if (typeof accepted === 'number' && Number.isFinite(accepted) && accepted >= 0) {
+    return Math.floor(accepted);
+  }
+  if (typeof accepted === 'boolean') return accepted ? fallback : 0;
+  return fallback;
+}
+
+function stringField(body: AckBody | null, key: keyof Ack): string | undefined {
+  const value = body?.[key];
+  return typeof value === 'string' && value.length > 0 ? value : undefined;
+}
+
+function numberField(body: AckBody | null, key: keyof Ack): number | undefined {
+  const value = body?.[key];
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
 }
 
 function safeHost(url: string): string {

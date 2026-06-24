@@ -351,6 +351,52 @@ export function workItemStatusToCallbackStatus(status) {
             return null;
     }
 }
+/**
+ * Map a returned dispatch Callback back onto the lifecycle event alphabet.
+ * Terminal success still becomes `agent.completed`, which lands in
+ * `review_ready`; it never resolves the item without a human acceptance event.
+ * Failed/cancelled callbacks are annotations by default because apps differ on
+ * whether they expire, retry, or keep supervising those proposals.
+ */
+export function callbackStatusToLifecycleEventType(status) {
+    switch (status) {
+        case 'accepted':
+        case 'running':
+            return 'agent.dispatch_acknowledged';
+        case 'succeeded':
+            return 'agent.completed';
+        case 'failed':
+        case 'cancelled':
+            return 'message.added';
+        default:
+            return null;
+    }
+}
+/**
+ * Project an adapter Callback into a WorkLifecycleEvent. The caller supplies
+ * the local work_item_id because the callback is keyed by concern_ref, while
+ * each testbed owns its own local id scheme.
+ */
+export function callbackToLifecycleEvent(workItemId, callback, options = {}) {
+    const type = callbackStatusToLifecycleEventType(callback.status);
+    if (!type)
+        return null;
+    return {
+        work_item_id: workItemId,
+        type,
+        actor_kind: 'agent',
+        actor_ref: options.actor_ref ?? callback.concern_ref,
+        occurred_at: options.occurred_at ?? callback.completed_at ?? new Date().toISOString(),
+        payload: {
+            callback,
+            ...(callback.status === 'failed' || callback.status === 'cancelled'
+                ? { message: callback.error ?? `callback ${callback.status}` }
+                : {}),
+        },
+        idempotency_key: options.idempotency_key ??
+            `callback:${callback.concern_ref}:${callback.status}:${callback.completed_at ?? callback.error_code ?? ''}`,
+    };
+}
 /** Map severity → the published WorkRequest/Concern priority vocabulary (1:1, default normal). */
 export function severityToPriority(severity) {
     switch (severity) {

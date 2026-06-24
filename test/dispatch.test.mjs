@@ -327,6 +327,41 @@ test('HttpDispatchAdapter reports failure on non-ok response without throwing', 
   assert.equal(ack.accepted, 0);
 });
 
+test('HttpDispatchAdapter preserves adapter ack truth from response bodies', async () => {
+  const acceptedNone = new HttpDispatchAdapter({
+    url: 'https://mesh.example/api/projectkit/concerns',
+    fetchImpl: async () => ({
+      ok: true,
+      status: 202,
+      json: async () => ({ ok: true, adapter: 'mesh-concerns', accepted: 0, concern_ref: 'c1' }),
+    }),
+  });
+  const signal = createProjectSignal({ projectKey: 'x', sink: new NullSink(), dispatchAdapter: acceptedNone, now: fixedNow });
+  const ack = await signal.dispatch({ concern_ref: 'c1', kind: 'execute', title: 'run' });
+  assert.equal(ack.ok, true);
+  assert.equal(ack.adapter, 'mesh-concerns');
+  assert.equal(ack.accepted, 0);
+  assert.equal(ack.concern_ref, 'c1');
+
+  const bodyNack = new HttpDispatchAdapter({
+    url: 'https://mesh.example/api/projectkit/concerns',
+    fetchImpl: async () => ({
+      ok: true,
+      status: 202,
+      json: async () => ({ ok: false, accepted: 0, error: 'policy rejected' }),
+    }),
+  });
+  const rejected = await createProjectSignal({
+    projectKey: 'x',
+    sink: new NullSink(),
+    dispatchAdapter: bodyNack,
+    now: fixedNow,
+  }).dispatch({ concern_ref: 'c2', kind: 'execute', title: 'run' });
+  assert.equal(rejected.ok, false);
+  assert.equal(rejected.accepted, 0);
+  assert.equal(rejected.error, 'policy rejected');
+});
+
 test('HttpDispatchAdapter requires a url', () => {
   assert.throws(() => new HttpDispatchAdapter({ url: '' }), /requires a url/);
 });

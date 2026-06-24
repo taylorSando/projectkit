@@ -262,4 +262,22 @@ export declare class HttpDispatchAdapter implements DispatchAdapter {
     constructor(opts: HttpDispatchAdapterOptions);
     dispatch(envelope: DispatchEnvelope): Promise<Ack>;
 }
+export interface HttpAckContext {
+    adapter: string;
+    httpOk: boolean;
+    httpStatus: number;
+    fallbackAccepted: number;
+    concernRef?: string;
+}
+/**
+ * Parse an adapter Ack from an HTTP response without assuming that HTTP 2xx
+ * means every concern was accepted. Mesh and local-executor return the real
+ * accepted count in the body; older adapters may omit it, so OK responses keep
+ * the historical fallback.
+ */
+export declare function readHttpAck(res: {
+    ok: boolean;
+    status: number;
+    json?: () => Promise<unknown>;
+}, ctx: HttpAckContext): Promise<Ack>;
 //# sourceMappingURL=dispatch.d.ts.map

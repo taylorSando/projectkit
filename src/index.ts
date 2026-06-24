@@ -84,6 +84,8 @@ export {
   isReversible,
   reversalExpiresAtMs,
   workItemStatusToCallbackStatus,
+  callbackStatusToLifecycleEventType,
+  callbackToLifecycleEvent,
   severityToPriority,
   validateWorkItem,
   transitionWorkItem,
@@ -98,6 +100,7 @@ export {
   type WorkLifecycleEvent,
   type CreateWorkItemInput,
   type ApplyResult,
+  type CallbackLifecycleEventOptions,
   type PromotionPolicy,
   type PromotionDecision,
   type WorkItemFilter,
@@ -105,8 +108,32 @@ export {
 } from './worklifecycle.js';
 
 export {
+  WORK_QUEUE_COLUMNS,
+  WORK_ITEM_STATUS_LABELS,
+  WORK_ITEM_LANE_LABELS,
+  WORK_ITEM_SEVERITY_LABELS,
+  WORK_ITEM_STATUS_TONES,
+  WORK_ITEM_DISPATCH_STATES,
+  columnForWorkItem,
+  groupWorkItemsByColumn,
+  actionsForWorkItem,
+  deriveWorkItemDispatchState,
+  extractWorkItemArtifacts,
+  assertWorkQueueVocabularyCoherent,
+  type WorkQueueColumnId,
+  type WorkItemTone,
+  type WorkQueueActionId,
+  type WorkQueueAction,
+  type WorkQueueActionPolicy,
+  type WorkItemDispatchState,
+  type WorkItemDispatchProjection,
+  type WorkItemArtifactRef,
+} from './workqueue.js';
+
+export {
   validateConcern,
   validateCallback,
+  readHttpAck,
   NullDispatchAdapter,
   MemoryDispatchAdapter,
   HttpDispatchAdapter,
@@ -121,6 +148,7 @@ export {
   type Callback,
   type DispatchAdapter,
   type DispatchSignFn,
+  type HttpAckContext,
   type HttpDispatchAdapterOptions,
 } from './dispatch.js';
 

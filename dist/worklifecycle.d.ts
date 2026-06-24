@@ -33,7 +33,7 @@
  * edit site for the machine — mirror it, don't fork it.
  */
 import type { ProjectKey } from './contract.js';
-import type { CallbackStatus } from './dispatch.js';
+import type { Callback, CallbackStatus } from './dispatch.js';
 import type { WorkIntent, WorkPriority } from './work.js';
 /**
  * The states a work item moves through. Terminal states are `resolved`,
@@ -199,6 +199,25 @@ export declare function evaluatePromotion(item: WorkItem, policy?: PromotionPoli
  * `workItemStatusToCallbackStatus`.)
  */
 export declare function workItemStatusToCallbackStatus(status: WorkItemStatus | string | null | undefined): CallbackStatus | null;
+/**
+ * Map a returned dispatch Callback back onto the lifecycle event alphabet.
+ * Terminal success still becomes `agent.completed`, which lands in
+ * `review_ready`; it never resolves the item without a human acceptance event.
+ * Failed/cancelled callbacks are annotations by default because apps differ on
+ * whether they expire, retry, or keep supervising those proposals.
+ */
+export declare function callbackStatusToLifecycleEventType(status: CallbackStatus | string | null | undefined): WorkLifecycleEventType | null;
+export interface CallbackLifecycleEventOptions {
+    actor_ref?: string | null;
+    occurred_at?: string;
+    idempotency_key?: string | null;
+}
+/**
+ * Project an adapter Callback into a WorkLifecycleEvent. The caller supplies
+ * the local work_item_id because the callback is keyed by concern_ref, while
+ * each testbed owns its own local id scheme.
+ */
+export declare function callbackToLifecycleEvent(workItemId: string, callback: Callback, options?: CallbackLifecycleEventOptions): WorkLifecycleEvent | null;
 /** Map severity → the published WorkRequest/Concern priority vocabulary (1:1, default normal). */
 export declare function severityToPriority(severity: WorkItemSeverity | string | null | undefined): WorkPriority;
 /** Validate a WorkItem against the contract. Empty array == valid. Mirrors validateWorkRequest. */
